@@ -1,0 +1,2031 @@
+// prisma/schema.prisma
+// 課程平台資料庫架構
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ==================== 用戶系統 ====================
+
+enum UserRole {
+  USER // 一般學員
+  INSTRUCTOR // 講師（課程與內容管理）
+  EDITOR // 舊版編輯者，升級後視為講師相容處理
+  ADMIN // 管理員（全權限）
+}
+
+enum EmailBounceState {
+  NONE
+  SOFT_SUSPENDED
+  HARD_BOUNCED
+  COMPLAINED
+}
+
+model User {
+  id               String    @id @default(cuid())
+  name             String?
+  phone            String?
+  email            String    @unique
+  emailVerified    DateTime?
+  image            String?
+  password         String? // 用於 Credentials 登入，bcrypt 加密
+  role             UserRole  @default(USER)
+  isGuest          Boolean   @default(false)
+  guestActivatedAt DateTime?
+  guestSource      String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  // 登入安全欄位
+  failedLoginCount  Int       @default(0)
+  lockedUntil       DateTime?
+  lastLoginAt       DateTime?
+  lastFailedLoginAt DateTime?
+
+  // 電子報同意與退訂狀態（行銷信以 NULL 視為未同意）
+  marketingConsent       Boolean?
+  marketingConsentAt     DateTime?
+  marketingConsentSource String?
+  marketingConsentIp     String?
+  generalEmailConsent    Boolean          @default(true)
+  generalEmailConsentAt  DateTime?
+  unsubscribedAt         DateTime?
+  emailInvalidAt         DateTime?
+  emailBounceState       EmailBounceState @default(NONE)
+  emailBounceCount       Int              @default(0)
+  locale                 String?
+  country                String?
+
+  // 課程訂閱制 — Stripe 顧客識別（find-or-create 後持久化）
+  stripeCustomerId String?
+
+  // Relations
+  accounts                        Account[]
+  sessions                        Session[]
+  purchases                       Purchase[]
+  newsletterAutomationEnrollments NewsletterAutomationEnrollment[]
+  newsletterAutomationOpens       NewsletterAutomationOpen[]
+  newsletterAutomationClicks      NewsletterAutomationClick[]
+  subscriptions                   CourseSubscription[]
+  progress                        LessonProgress[]
+  lessonComments                  LessonComment[]
+  lessonCommentsDeleted           LessonComment[]                  @relation("LessonCommentDeletedBy")
+  guestActivationTokens           GuestActivationToken[]
+  passwordResetTokens             PasswordResetToken[]
+
+  // 優惠券兌換記錄
+  couponRedemptions CouponRedemption[]
+
+  // 管理員操作日誌
+  adminLogs AdminLog[]
+
+  // 觀看時間紀錄
+  watchTimeLogs WatchTimeLog[]
+
+  // 課程評價
+  reviews        CourseReview[]
+  reviewHelpfuls ReviewHelpful[]
+  reviewReports  ReviewReport[]
+
+  // 測驗與作業
+  quizAttempts          QuizAttempt[]
+  assignmentSubmissions AssignmentSubmission[]
+  assignmentReviews     AssignmentReview[]
+  assignmentDrafts      AssignmentDraft[]
+  lessonPrivateMessages LessonPrivateMessage[]
+  onboardingSurveys     CourseOnboardingSurveyResponse[]
+  createdCourses        Course[]                         @relation("CourseCreatedBy")
+  manageableCourses     CourseInstructor[]
+  newsletterCampaigns   NewsletterCampaign[]             @relation("NewsletterCreatedBy")
+  newsletterRecipients  NewsletterRecipient[]
+  newsletterTemplates   NewsletterTemplate[]
+  emailConsentLogs      EmailConsentLog[]
+
+  @@index([phone])
+  @@index([isGuest])
+  // 效能：學員列表 / 用戶成長趨勢以 role 過濾 + createdAt 範圍/排序
+  @@index([role, createdAt])
+  @@index([marketingConsent])
+  @@index([generalEmailConsent])
+  @@index([emailBounceState])
+  @@index([unsubscribedAt])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ==================== 課程系統 ====================
+
+enum CourseStatus {
+  DRAFT // 草稿
+  PUBLISHED // 已發佈
+  UNLISTED // 隱藏（僅連結可見）
+}
+
+enum CourseVisibility {
+  PUBLIC // 公開販售，出現在公開列表
+  UNLISTED // 連結販售，不出現在公開列表
+  INVITE_ONLY // 私密邀請，需有效邀請才可購買
+}
+
+enum CourseAccessType {
+  LIFETIME // 永久授權（一次付費，終身觀看）
+  DURATION // 期限授權（從購買起算 N 天）
+  FIXED_DATE // 固定到期日（所有學員統一到期，適合期數制）
+}
+
+enum BundleStatus {
+  DRAFT // 草稿
+  PUBLISHED // 已發佈
+  ARCHIVED // 已封存
+}
+
+enum LessonStatus {
+  PUBLISHED // 已發佈（預設）
+  COMING_SOON // 製作中
+}
+
+enum VideoProvider {
+  YOUTUBE
+  CLOUDFLARE
+  VIMEO
+  BUNNY
+}
+
+enum WatermarkEmailDisplayMode {
+  FULL
+  MASKED
+}
+
+enum WatermarkTextSize {
+  SM
+  MD
+  LG
+}
+
+enum WatermarkMovementMode {
+  STANDARD
+  AGGRESSIVE
+}
+
+model Course {
+  id          String  @id @default(cuid())
+  title       String
+  subtitle    String?
+  slug        String  @unique
+  description String? @db.Text
+  coverImage  String?
+
+  // 定價
+  price            Int       @default(0) // 原價（以新台幣計，單位：元）
+  salePrice        Int? // 促銷價
+  saleEndAt        DateTime? // 促銷截止日期
+  saleLabel        String? // 促銷說明文字（如「開工優惠」「限時早鳥」）
+  saleCycleEnabled Boolean   @default(false) // 是否啟用永久促銷循環
+  saleCycleDays    Int? // 循環天數（啟用循環模式時使用）
+  showCountdown    Boolean   @default(true) // 是否在銷售頁顯示倒數時鐘
+
+  // Stripe Product/Price
+  stripeProductId   String? // Stripe Product ID (prod_xxx)
+  stripePriceId     String? // 原價 Price ID (price_xxx)
+  stripeSalePriceId String? // 促銷價 Price ID (price_xxx)
+
+  // SEO
+  seoTitle    String?
+  seoDesc     String? @db.Text
+  seoKeywords String?
+
+  // OG / Social（與 SEO 分開管理）
+  ogTitle       String?
+  ogDescription String? @db.Text
+  ogImage       String?
+
+  // 銷售頁設定
+  landingPageMode String? // "react" | "html"，null 視為 "react"
+  landingPageSlug String? // React 模式：對應 components/main/landing/pages/{slug}.tsx
+  landingPageHtml String? @db.Text // HTML 模式：直接存 HTML 內容
+
+  // JSON-LD 結構化資料
+  instructorName  String? // 講師名稱
+  instructorTitle String? // 講師職稱
+  instructorDesc  String? @db.Text // 講師簡介
+  courseWorkload  String? // 課程時長（ISO 8601，如 "PT2H30M"）
+  ratingValue     String? // 評分值（如 "5"）
+  ratingCount     String? // 評分數量（如 "400"）
+
+  // AI 客服知識庫（既有正式資料欄位）
+  aiChatFaq   Json?
+  aiChatExtra String? @db.Text
+
+  // Meta Pixel / CAPI（per-course）
+  metaPixelId         String?
+  metaCapiAccessToken String?
+
+  // 購買通知
+  notifyAdminOnPurchase Boolean @default(false) // 有人購買時是否寄 Email 通知管理員
+
+  // 有效期限設定
+  accessType                CourseAccessType @default(LIFETIME) // 授權類型
+  accessDurationDays        Int? // DURATION 模式：從購買起算 N 天
+  accessExpiresAt           DateTime? // FIXED_DATE 模式：所有學員統一到期日
+  expirationReminderEnabled Boolean          @default(true) // 是否啟用到期提醒 Email
+  expirationReminderDays    Int[]            @default([30, 7, 1]) // 到期前 N 天提醒（陣列）
+
+  // 評價設定
+  enableReviews Boolean @default(false) // 是否啟用評價功能（關閉後學員無法評價，所有入口消失）
+  showReviews   Boolean @default(false) // 是否在銷售頁顯示評價區塊（需先啟用評價功能）
+
+  status          CourseStatus     @default(DRAFT)
+  salesVisibility CourseVisibility @default(PUBLIC)
+  createdById     String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  // Relations
+  createdBy             User?                            @relation("CourseCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  instructors           CourseInstructor[]
+  chapters              Chapter[]
+  purchases             Purchase[]
+  invites               CourseInvite[]
+  bundleCourses         BundleCourse[]
+  onboardingSurveys     CourseOnboardingSurveyResponse[]
+  plans                 CoursePlan[]
+  welcomeEmails         CourseWelcomeEmail[]
+  emailDelivery         EmailDeliveryLog[]
+  newsletterAutomation  NewsletterAutomation?
+  coupons               Coupon[]                         @relation("CouponCourses")
+  reviews               CourseReview[]
+  videoWatermarkSetting CourseVideoWatermarkSetting?
+  subscriptionPlans     CourseSubscriptionPlan[]
+  subscriptions         CourseSubscription[]
+  salesChats            SalesChat[]
+  salesInquiries        SalesInquiry[]
+
+  @@index([salesVisibility])
+  @@index([status, salesVisibility])
+  @@index([createdById])
+}
+
+enum PurchaseAccessLevel {
+  BASIC
+  VIP
+}
+
+enum GhostGrantStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  SKIPPED
+}
+
+enum OrbivoGrantStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  SKIPPED
+}
+
+enum CourseOnboardingSurveyStatus {
+  SUBMITTED
+  SKIPPED
+}
+
+// 舊版方案資料仍存在正式資料庫；保留完整模型避免未來 migration 誤刪財務歷史。
+model CoursePlan {
+  id       String @id @default(cuid())
+  courseId String
+  slug     String
+  name     String
+
+  price         Int
+  originalPrice Int
+  description   String? @db.Text
+  lineItems     Json?
+
+  stripeProductId String?
+  stripePriceId   String?
+
+  accessLevel      PurchaseAccessLevel @default(BASIC)
+  ghostGrantMonths Int?
+  ghostTierId      String?
+  maxSlots         Int?
+  active           Boolean             @default(true)
+  sortOrder        Int                 @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, slug])
+  @@index([courseId, active])
+  @@index([slug])
+}
+
+model CourseInstructor {
+  id          String   @id @default(cuid())
+  courseId    String
+  userId      String
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, userId])
+  @@index([userId])
+  @@index([courseId])
+}
+
+model CourseInvite {
+  id        String @id @default(cuid())
+  courseId  String
+  tokenHash String @unique
+
+  // null email means the invite can be used by any authenticated buyer.
+  email     String?
+  maxUses   Int?
+  usedCount Int       @default(0)
+  expiresAt DateTime?
+  active    Boolean   @default(true)
+
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([courseId])
+  @@index([email])
+  @@index([active, expiresAt])
+  @@index([createdBy])
+}
+
+model Bundle {
+  id          String  @id @default(cuid())
+  title       String
+  slug        String  @unique
+  description String? @db.Text
+  coverImage  String?
+
+  price     Int  @default(0)
+  salePrice Int?
+
+  status     BundleStatus     @default(DRAFT)
+  visibility CourseVisibility @default(PUBLIC)
+  createdBy  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  courses   BundleCourse[]
+  orders    Order[]
+  purchases Purchase[]
+  coupons   Coupon[]       @relation("CouponBundles")
+
+  @@index([status, visibility])
+  @@index([createdBy])
+}
+
+model BundleCourse {
+  id       String @id @default(cuid())
+  bundleId String
+  courseId String
+  order    Int    @default(0)
+
+  createdAt DateTime @default(now())
+
+  bundle Bundle @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([bundleId, courseId])
+  @@index([bundleId, order])
+  @@index([courseId])
+}
+
+model CourseVideoWatermarkSetting {
+  id       String @id @default(cuid())
+  courseId String @unique
+
+  enabled            Boolean                   @default(false)
+  showEmail          Boolean                   @default(true)
+  showCourseTitle    Boolean                   @default(true)
+  showTimestamp      Boolean                   @default(true)
+  emailDisplayMode   WatermarkEmailDisplayMode @default(FULL)
+  opacityPercent     Int                       @default(18)
+  textSize           WatermarkTextSize         @default(MD)
+  movementMode       WatermarkMovementMode     @default(STANDARD)
+  moveIntervalSec    Int                       @default(12)
+  tamperPauseEnabled Boolean                   @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([enabled])
+}
+
+model Chapter {
+  id        String   @id @default(cuid())
+  courseId  String
+  title     String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  course  Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons Lesson[]
+
+  @@index([courseId])
+}
+
+model Lesson {
+  id        String  @id @default(cuid())
+  chapterId String
+  title     String
+  content   String? @db.Text // Markdown 內容
+
+  // Legacy Cloudflare Stream field kept for backward compatibility
+  videoId        String? // Cloudflare Stream Video ID
+  videoProvider  VideoProvider?
+  videoSourceId  String?
+  videoUrl       String?
+  videoThumbnail String?
+  videoDuration  Int? // 影片長度（秒）
+
+  isFree    Boolean  @default(false) // 是否免費試閱
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 單元狀態
+  status LessonStatus @default(PUBLISHED)
+
+  // 製作中 (COMING_SOON) 設定
+  comingSoonTitle       String? // Modal 標題（預設使用單元標題）
+  comingSoonDescription String?   @db.Text // Modal 說明文字
+  comingSoonImage       String? // 預覽圖片 URL
+  comingSoonDate        DateTime? // 預計上線日期
+
+  // Relations
+  chapter         Chapter                @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  progress        LessonProgress[]
+  comments        LessonComment[]
+  privateMessages LessonPrivateMessage[]
+  watchTimeLogs   WatchTimeLog[]
+
+  // 測驗與作業
+  quiz       Quiz?
+  assignment Assignment?
+
+  @@index([chapterId])
+}
+
+// ==================== 課程評論/留言 ====================
+
+model LessonComment {
+  id          String  @id @default(cuid())
+  lessonId    String
+  userId      String
+  content     String  @db.Text
+  isAnonymous Boolean @default(false)
+
+  // 管理者已讀狀態
+  isRead Boolean @default(false)
+
+  // 軟刪除（後台可追蹤匿名留言者真實身份）
+  deletedAt DateTime?
+  deletedBy String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  deletedByUser User? @relation("LessonCommentDeletedBy", fields: [deletedBy], references: [id])
+
+  @@index([lessonId, createdAt])
+  @@index([userId, createdAt])
+}
+
+model LessonPrivateMessage {
+  id                 String  @id @default(cuid())
+  lessonId           String
+  userId             String
+  content            String  @db.Text
+  attachmentMediaId  String?
+  attachmentUrl      String?
+  attachmentName     String?
+  attachmentMimeType String?
+  attachmentSize     Int?
+
+  isFromTeacher Boolean @default(false)
+  readByTeacher Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([lessonId, userId, createdAt])
+  @@index([readByTeacher, createdAt])
+  @@index([userId, isFromTeacher, createdAt])
+}
+
+// ==================== 課程評價 ====================
+
+model CourseReview {
+  id       String  @id @default(cuid())
+  courseId String
+  userId   String
+  rating   Int // 1-5 星
+  content  String? @db.Text // 文字評價（選填）
+
+  isVisible    Boolean @default(true) // 老師可隱藏個別評價
+  helpfulCount Int     @default(0) // 有用投票數（冗餘計數）
+
+  // 老師回覆
+  replyContent String?   @db.Text
+  replyAt      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  course   Course          @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  helpfuls ReviewHelpful[]
+  reports  ReviewReport[]
+
+  @@unique([userId, courseId])
+  @@index([courseId])
+  @@index([userId])
+}
+
+model ReviewHelpful {
+  id       String @id @default(cuid())
+  reviewId String
+  userId   String
+
+  createdAt DateTime @default(now())
+
+  review CourseReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, reviewId])
+  @@index([reviewId])
+}
+
+model ReviewReport {
+  id       String @id @default(cuid())
+  reviewId String
+  userId   String
+  reason   String // 舉報原因
+
+  createdAt DateTime @default(now())
+
+  review CourseReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, reviewId])
+  @@index([reviewId])
+}
+
+model LessonProgress {
+  id          String   @id @default(cuid())
+  userId      String
+  lessonId    String
+  completed   Boolean  @default(false)
+  watchedSec  Int      @default(0) // 觀看秒數
+  lastWatchAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@index([userId])
+  @@index([lessonId])
+}
+
+// 用戶觀看時間紀錄（每分鐘心跳）
+model WatchTimeLog {
+  id        String   @id @default(cuid())
+  userId    String
+  lessonId  String
+  startedAt DateTime // 此心跳區間的開始時間
+  duration  Int // 此區間的有效觀看秒數（通常為 60）
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([lessonId, createdAt])
+  @@index([userId, lessonId, createdAt])
+  // 效能：DAU / 每日學習人數以 createdAt 範圍過濾 + COUNT(DISTINCT userId)；
+  // createdAt 須為前導欄（Postgres 無 skip-scan，既有 userId 開頭索引無法服務此查詢）
+  @@index([createdAt, userId])
+}
+
+// ==================== 優惠券系統 ====================
+
+enum DiscountType {
+  AMOUNT // 固定金額折扣
+  PERCENT // 百分比折扣
+}
+
+model Coupon {
+  id          String  @id @default(cuid())
+  name        String // 優惠券名稱（內部識別）
+  code        String  @unique // 優惠碼（大寫，用戶輸入時自動轉大寫比對）
+  description String? // 說明（選填）
+
+  // 折扣設定（二擇一）
+  discountType      DiscountType // AMOUNT 或 PERCENT
+  amountOff         Int? // 固定折抵金額（元）
+  percentOff        Int? // 百分比折扣（1-100）
+  maxDiscountAmount Int? // 百分比折扣的金額上限（選填）
+
+  // 使用限制
+  maxRedemptions Int?    @default(0) // 總兌換次數上限（0=無限）
+  timesRedeemed  Int     @default(0) // 已兌換次數
+  maxPerUser     Int?    @default(0) // 每人使用上限（0=無限）
+  minimumAmount  Int? // 最低消費金額（選填）
+  firstTimeOnly  Boolean @default(false) // 僅限首次購買用戶
+
+  // 時間與狀態
+  active    Boolean   @default(true)
+  startsAt  DateTime? // 生效時間（null=立即生效）
+  expiresAt DateTime? // 到期時間（null=永不到期）
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 適用商品（courses 與 bundles 都空=全站適用）
+  courses             Course[]             @relation("CouponCourses")
+  bundles             Bundle[]             @relation("CouponBundles")
+  redemptions         CouponRedemption[]
+  newsletterCampaigns NewsletterCampaign[]
+
+  @@index([code])
+  @@index([active])
+}
+
+model CouponRedemption {
+  id         String  @id @default(cuid())
+  couponId   String
+  userId     String
+  orderId    String
+  campaignId String?
+  amount     Int // 實際折抵金額
+
+  createdAt DateTime @default(now())
+
+  coupon   Coupon              @relation(fields: [couponId], references: [id])
+  user     User                @relation(fields: [userId], references: [id])
+  campaign NewsletterCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  @@unique([orderId]) // 一張訂單只記錄一次兌換（webhook 重送 / 重複處理時的冪等兜底）
+  @@index([couponId, userId])
+  @@index([campaignId])
+}
+
+// ==================== 金流系統 ====================
+
+enum OrderStatus {
+  PENDING // 待付款
+  PAID // 已付款
+  FAILED // 付款失敗
+  REFUNDED // 已退款
+  CANCELLED // 已取消
+}
+
+enum PaymentMethod {
+  CREDIT_CARD
+  APPLE_PAY
+  GOOGLE_PAY
+  ATM
+  CVS // 超商代碼
+}
+
+// ==================== 課程訂閱制 ====================
+
+enum SubscriptionPlanType {
+  UNLIMITED // 無限訂閱：不取消就一直扣款、一直能看
+  FIXED_TERM // 期限訂閱：繳滿 N 期（類似分期付款）
+}
+
+enum BillingInterval {
+  MONTH // 月繳
+  YEAR // 年繳
+}
+
+enum TermEndBehavior {
+  GRANT_LIFETIME // 期限訂閱繳滿後轉為永久擁有（預設，分期付款語意）
+  END_ACCESS // 期限訂閱繳滿後結束存取
+}
+
+enum SubscriptionStatus {
+  PENDING // 已建立、等待首期付款開通
+  ACTIVE // 生效中（已付款、權限有效）
+  PAST_DUE // 扣款失敗、寬限期中（gateway 重試或待用戶自救）
+  CANCELED // 已取消（用戶/管理員取消、或 gateway 非自願終止）
+  COMPLETED // 期限訂閱繳滿完成
+}
+
+enum EmailDeliveryType {
+  COURSE_WELCOME
+  COURSE_EXPIRATION_REMINDER // 到期前提醒
+  COURSE_EXPIRED_NOTICE // 過期通知
+  COURSE_ACCESS_EXTENDED // 授權延長通知
+  PASSWORD_RESET // 忘記密碼／重設既有密碼
+  PASSWORD_SETUP // 首次設定登入密碼（訪客 / 新建 / 純 OAuth 帳號加開密碼）
+  OAUTH_PASSWORD_SETUP // 舊版 OAuth 密碼設定紀錄（保留資料庫相容性）
+  GUEST_ACTIVATION // 舊版訪客啟用紀錄（保留資料庫相容性）
+}
+
+enum EmailDeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
+}
+
+enum NewsletterType {
+  GENERAL
+  PROMO
+}
+
+enum NewsletterStatus {
+  DRAFT
+  SCHEDULED
+  QUEUED
+  SENDING
+  PAUSED
+  SENT
+  PARTIAL_FAILED
+  FAILED
+  CANCELLED
+}
+
+enum NewsletterRecipientStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+  SKIPPED
+  BOUNCED
+}
+
+enum NewsletterAutomationDeliveryStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+  SKIPPED
+}
+
+enum EmailConsentType {
+  GENERAL
+  MARKETING
+}
+
+enum EmailConsentAction {
+  GRANTED
+  REVOKED
+}
+
+enum NewsletterAlertType {
+  INFO
+  WARNING
+  ERROR
+}
+
+model Order {
+  id       String  @id @default(cuid())
+  orderNo  String  @unique // 內部訂單編號
+  userId   String
+  courseId String? // 舊版單課購買保留；組合包訂單時為 null
+  bundleId String?
+
+  amount         Int // 實際付款金額
+  originalAmount Int // 原始金額
+  currency       String @default("TWD")
+
+  // 舊版買斷方案快照；保留供既有訂單稽核與相容性使用。
+  planId        String?
+  planSlug      String  @default("basic")
+  planName      String?
+  planLineItems Json?
+
+  // 優惠券
+  couponId       String? // 使用的優惠券 ID
+  couponDiscount Int? // 優惠券折抵金額
+
+  status         OrderStatus    @default(PENDING)
+  paymentMethod  PaymentMethod?
+  paymentGateway String? // 'shopline' | 'stripe' | 'payuni'
+
+  // 金流閘道相關（欄位名沿用歷史 Stripe 命名，但三種 gateway 共用）
+  // - Shopline: sessionId / tradeOrderId
+  // - Stripe:   checkout session / payment intent
+  // - PAYUNi:   MerTradeNo / TradeNo
+  stripeSessionId            String? // Gateway Session/Trade ID
+  stripePaymentIntentId      String?   @unique // Gateway Payment Reference ID（退款用）
+  gatewayInvoiceId           String?   @unique // Stripe invoice id / provider invoice reference
+  hostedInvoiceUrl           String? // Stripe 補繳／收據頁；僅保存 provider 回傳的 HTTPS URL
+  stripeResponse             Json? // Gateway 回傳資料
+  gatewayPaymentInstructions Json? // ATM / CVS 等待付款資訊（銀行代碼、虛擬帳號、繳費期限等）
+  gatewayPaymentExpiresAt    DateTime?
+
+  paidAt            DateTime?
+  refundedAt        DateTime?
+  refundReason      String?
+  refundError       String?
+  refundStatus      String? // PROCESSING | PENDING_MANUAL | COMPLETED | FAILED | PARTIAL
+  refundRequestedAt DateTime?
+  refundCompletedAt DateTime?
+  gatewayRefundId   String?
+  disputeStatus     String? // NEEDS_RESPONSE | WON | LOST | CLOSED
+  gatewayDisputeId  String?
+  disputedAt        DateTime?
+
+  // 臺灣電子發票 — 買受人開立偏好（結帳時收集；發票功能未啟用時皆為 null）
+  invoiceType        InvoiceType? // PERSONAL（個人/載具）| COMPANY（公司/統編）| DONATION（捐贈）
+  invoiceCarrierType String? // 個人時的載具類別：'mobile'（手機條碼）| 'member'（會員載具）
+  invoiceCarrierId   String? // 載具號碼（手機條碼，如 /ABC1234）
+  invoiceTaxId       String? // 買方統一編號（公司）
+  invoiceTitle       String? // 買方公司抬頭
+  invoiceLoveCode    String? // 捐贈碼 / 愛心碼（3-7 碼）
+  invoiceAddress     String? // 買方地址（公司三聯式紙本開立 / 寄送用）
+
+  // 用戶端資訊（供 Meta CAPI 歸因使用）
+  clientIpAddress String? // 建立訂單時的用戶 IP
+  clientUserAgent String? // 建立訂單時的用戶 User-Agent
+  fbp             String? // Meta _fbp cookie
+  fbc             String? // Meta _fbc cookie
+  metaCAPIFiredAt DateTime? // server-side Purchase event 去重時間
+
+  // UTM 歸因追蹤
+  utmSource   String? // 廣告來源（meta, google, etc.）
+  utmMedium   String? // 媒介（cpc, social, email, etc.）
+  utmCampaign String? // 活動名稱
+  utmContent  String? // 廣告內容
+  utmTerm     String? // 關鍵字
+
+  // 電子報歸因
+  newsletterCampaignId String?
+  newsletterLinkId     String?
+
+  // 課程訂閱制 — 每期扣款 = 一張 Order(PAID)，複用發票／營收／退款
+  subscriptionId   String? // 所屬訂閱（買斷訂單為 null）
+  periodNumber     Int? // 第幾期（首期 = 1；PAYUNi 失敗期允許留空洞）
+  gatewayPeriodKey String? @unique // gateway 每期冪等鍵（Stripe=invoice id、PAYUNi=PeriodOrderNo）
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  bundle                          Bundle?                          @relation(fields: [bundleId], references: [id], onDelete: Restrict)
+  subscription                    CourseSubscription?              @relation(fields: [subscriptionId], references: [id], onDelete: Restrict)
+  invoice                         Invoice? // 臺灣電子發票（1:1，付款成功後才開立）
+  newsletterAutomationEnrollments NewsletterAutomationEnrollment[]
+  newsletterCampaign              NewsletterCampaign?              @relation(fields: [newsletterCampaignId], references: [id], onDelete: SetNull)
+  newsletterLink                  NewsletterLink?                  @relation(fields: [newsletterLinkId], references: [id], onDelete: SetNull)
+
+  // 訂閱：期款查詢與冪等
+  @@unique([subscriptionId, periodNumber])
+  // 不直接關聯 User 和 Course，避免刪除問題
+  @@index([userId])
+  @@index([courseId])
+  @@index([bundleId])
+  @@index([orderNo])
+  @@index([stripeSessionId])
+  @@index([refundStatus, refundRequestedAt])
+  @@index([gatewayPaymentExpiresAt])
+  // 效能：全站營收/本月/趨勢/Top 課程聚合皆以 status='PAID' + paidAt 範圍過濾
+  @@index([status, paidAt])
+  // 效能：訂單列表 orderBy createdAt desc 分頁
+  @@index([createdAt])
+  // 效能：單一課程銷售分析（同時可覆蓋僅依 courseId 的查詢）
+  @@index([courseId, status, paidAt])
+  @@index([newsletterCampaignId])
+  @@index([subscriptionId])
+}
+
+/**
+ * 臺灣電子發票（統一發票）
+ * 與 Order 一對一；orderId @unique 在資料庫層級保證「一張訂單只會開立一次」（冪等）。
+ * 透過加值中心（綠界 ECPay / 藍新 ezPay）開立，由 lib/invoice 抽象層處理。
+ */
+model Invoice {
+  id      String @id @default(cuid())
+  orderId String @unique
+
+  provider String // 'ecpay' | 'ezpay'
+  status   InvoiceStatus @default(PENDING)
+
+  invoiceNumber String? // 發票號碼（如 AB12345678）
+  randomCode    String? // 隨機碼（4 碼）
+  invoiceDate   DateTime? // 發票開立日期
+  amount        Int // 發票金額（含稅總額，與 Order.amount 一致）
+
+  allowanceNumber             String? // 最近一次折讓單號碼
+  allowanceAmount             Int? // 最近一次折讓金額
+  allowanceTotal              Int       @default(0) // 累計已折讓金額（支援分次折讓，上限為發票金額）
+  // ECPay 線上折讓需買受人在 72 小時內點信件確認；確認前不得計入 allowanceTotal。
+  allowancePendingNumber      String?
+  allowancePendingAmount      Int?
+  allowancePendingExpiresAt   DateTime?
+  // 外部 API 操作鎖：以 updateMany CAS 阻止作廢／折讓並發重複送出。
+  operationType               String? // VOID | ALLOWANCE
+  operationAmount             Int?
+  operationBaseAllowanceTotal Int?
+  operationStartedAt          DateTime?
+  voidedAt                    DateTime? // 作廢時間
+
+  failReason  String? // 開立 / 作廢 / 折讓失敗原因
+  rawResponse Json? // 加值中心原始回應（稽核用）
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceNumber])
+  @@index([status])
+  @@index([allowancePendingExpiresAt])
+  @@index([operationType, operationStartedAt])
+}
+
+enum InvoiceStatus {
+  PENDING // 尚未開立 / 處理中
+  ISSUED // 已開立
+  FAILED // 開立失敗
+  VOIDED // 已作廢
+  ALLOWANCE // 已折讓
+}
+
+enum InvoiceType {
+  PERSONAL // 個人（二聯式 / 雲端載具）
+  COMPANY // 公司（三聯式 / 統編）
+  DONATION // 捐贈
+}
+
+model Purchase {
+  id       String  @id @default(cuid())
+  userId   String
+  courseId String
+  orderId  String? // 關聯訂單（手動授權時可為 null）
+
+  grantedBy String? // 手動授權的管理員 ID
+  grantNote String? // 手動授權備註（原因、案件單號等）
+  source    PurchaseSource @default(PAID) // 授權來源
+  bundleId  String? // 組合包購買授權來源；每門課仍各自建立 Purchase
+  expiresAt DateTime? // 權限過期時間（null = 永久）
+  revokedAt DateTime? // 撤銷時間
+
+  // 舊版 VIP 授權快照；既有正式資料不可由後續 migration 移除。
+  accessLevel  PurchaseAccessLevel @default(BASIC)
+  vipGrantedAt DateTime?
+  vipExpiresAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  user                User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course              Course                     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  bundle              Bundle?                    @relation(fields: [bundleId], references: [id], onDelete: Restrict)
+  expirationReminders CourseExpirationReminder[]
+
+  @@unique([userId, courseId])
+  @@index([userId])
+  @@index([courseId])
+  @@index([bundleId])
+  @@index([expiresAt])
+  @@index([accessLevel])
+}
+
+model CourseOnboardingSurveyResponse {
+  id       String @id @default(cuid())
+  userId   String
+  courseId String
+
+  status CourseOnboardingSurveyStatus
+
+  goals                String[]
+  purchaseFactors      String[]
+  hesitation           String?  @db.Text
+  alternatives         String?  @db.Text
+  discoverySource      String?
+  discoverySourceOther String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@index([courseId])
+  @@index([status])
+}
+
+/**
+ * 課程訂閱方案（後台於課程定價 tab 設定）
+ * 一門課可有多個方案（如月繳無限、年繳無限、分 12 期）。
+ * 買斷與訂閱同時存在；訂戶權限完全由訂閱週期驅動，與課程 accessType 無關。
+ */
+model CourseSubscriptionPlan {
+  id       String @id @default(cuid())
+  courseId String
+  label    String // 顯示名稱（如「月繳無限方案」）
+
+  type                SubscriptionPlanType
+  interval            BillingInterval
+  price               Int // 每期金額（≥2，PAYUNi PeriodAmt 下限 >1 元）
+  totalPeriods        Int? // FIXED_TERM 必填 2–900；UNLIMITED 為 null
+  termEndBehavior     TermEndBehavior      @default(GRANT_LIFETIME)
+  renewalReminderDays Int? // YEAR 方案強制 ≥7 不可為 null（卡組織 pre-billing 要求）；MONTH 預設 null
+
+  enabled       Boolean @default(true)
+  sortOrder     Int     @default(0)
+  stripePriceId String? // Stripe 對應的 recurring Price（gateway=stripe 時同步）
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  course        Course               @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  subscriptions CourseSubscription[]
+
+  @@index([courseId])
+  @@index([courseId, enabled, sortOrder])
+}
+
+/**
+ * 課程訂閱實體（一位使用者對一門課的一次訂閱關係）
+ * 每期扣款各建一張 Order（見 Order.subscriptionId），Purchase 隨每期展期。
+ * 並發防重：migration 另建 partial unique index (userId, courseId) WHERE status IN (PENDING/ACTIVE/PAST_DUE)。
+ */
+model CourseSubscription {
+  id       String @id @default(cuid())
+  userId   String
+  courseId String
+  planId   String
+
+  status                 SubscriptionStatus @default(PENDING)
+  gateway                String // 'stripe' | 'payuni'
+  gatewaySubscriptionId  String? // Stripe subscription id / PAYUNi PeriodTradeNo
+  gatewayTradeNo         String?            @unique // PAYUNi 專用 MerTradeNo（≤25 碼自產，如 SUB+YYYYMMDD+12hex）
+  checkoutIdempotencyKey String?            @unique // provider create-session 的持久化冪等鍵
+  gatewayPriceId         String? // Stripe 建立當下使用的 recurring Price 快照
+  gatewayEnvironment     String? // stripe:test|live / payuni:sandbox|production
+
+  // 方案快照（建立當下複製，之後方案變動不影響進行中訂閱）
+  planType        SubscriptionPlanType
+  interval        BillingInterval
+  pricePerPeriod  Int
+  totalPeriods    Int?
+  termEndBehavior TermEndBehavior
+
+  paidPeriods      Int       @default(0) // 唯一合法定義：該訂閱 PAID 期款 Order 的交易內計數
+  currentPeriodEnd DateTime? // 更新一律 max(現值, 新值)，防晚到 webhook 回退
+  lastPaymentAt    DateTime?
+  canceledAt       DateTime?
+  cancelReason     String?
+  completedAt      DateTime?
+
+  pendingGatewayCancelAt DateTime? // gateway 取消失敗待重試（maintenance tick 為 retry owner）
+  cancelRequestedAt      DateTime? // 一旦存在，續期不得再恢復 ACTIVE／Purchase
+  attentionReason        String? // 異常標記（TERM_ENDED_UNDERPAID / WEBHOOK_STALE / CANCEL_RETRY_EXHAUSTED 等）
+  lastFailedPeriodNumber Int?
+  lastFailedPeriodKey    String?
+
+  // 同意證據（法遵：chargeback / 消保舉證）
+  consentAt          DateTime?
+  consentTextVersion String? // 當下顯示的扣款條款/取消政策版本代碼
+
+  // 通知防重
+  reminderSentForPeriod Int? // 即將扣款提醒已寄到第幾期
+  accessEndNoticeSentAt DateTime?
+
+  // 電子發票偏好快照（首次結帳收集；可更新）
+  invoiceType        InvoiceType?
+  invoiceCarrierType String?
+  invoiceCarrierId   String?
+  invoiceTaxId       String?
+  invoiceTitle       String?
+  invoiceLoveCode    String?
+  invoiceAddress     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User                   @relation(fields: [userId], references: [id], onDelete: Restrict)
+  course Course                 @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  plan   CourseSubscriptionPlan @relation(fields: [planId], references: [id], onDelete: Restrict)
+  orders Order[]
+
+  @@unique([gateway, gatewaySubscriptionId])
+  @@index([userId])
+  @@index([courseId])
+  @@index([planId])
+  @@index([status, currentPeriodEnd])
+}
+
+/**
+ * 金流 webhook 收件匣：先持久化事件，再執行狀態機。
+ * Stripe 使用 event.id；PAYUNi 使用簽章 payload 的 deterministic fingerprint。
+ */
+model PaymentWebhookEvent {
+  id          String    @id @default(cuid())
+  gateway     String
+  eventId     String
+  eventType   String
+  status      String    @default("PROCESSING") // PROCESSING | PROCESSED | FAILED
+  payload     Json?
+  attempts    Int       @default(1)
+  lastError   String?
+  processedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([gateway, eventId])
+  @@index([status, updatedAt])
+}
+
+/**
+ * 訂閱交易提交後副作用的 durable outbox。
+ * 發票、Email、分析事件由 maintenance 重試，避免 webhook commit 後 crash 永久漏執行。
+ */
+model SubscriptionOutbox {
+  id             String    @id @default(cuid())
+  dedupeKey      String    @unique
+  eventType      String
+  subscriptionId String
+  orderId        String?
+  payload        Json
+  status         String    @default("PENDING") // PENDING | PROCESSING | COMPLETED | FAILED
+  attempts       Int       @default(0)
+  nextAttemptAt  DateTime  @default(now())
+  lockedAt       DateTime?
+  completedAt    DateTime?
+  lastError      String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([status, nextAttemptAt])
+  @@index([subscriptionId])
+  @@index([orderId])
+}
+
+model NewsletterCampaign {
+  id                    String           @id @default(cuid())
+  type                  NewsletterType   @default(GENERAL)
+  name                  String
+  subject               String
+  preheader             String?
+  contentJson           Json
+  bodyHtml              String?          @db.Text
+  bodyText              String?          @db.Text
+  templateId            String?
+  status                NewsletterStatus @default(DRAFT)
+  scheduledAt           DateTime?
+  timezone              String           @default("Asia/Taipei")
+  senderName            String?
+  replyTo               String?
+  segmentJson           Json?
+  couponId              String?
+  attributionWindowDays Int              @default(7)
+  ratePerMinute         Int              @default(60)
+  senderSnapshot        Json?
+  sentCursor            Int              @default(0)
+  totalRecipients       Int              @default(0)
+  sentCount             Int              @default(0)
+  failedCount           Int              @default(0)
+  skippedCount          Int              @default(0)
+  openCount             Int              @default(0)
+  clickCount            Int              @default(0)
+  unsubCount            Int              @default(0)
+  lastHeartbeatAt       DateTime?
+  snapshotAt            DateTime?
+  errorMessage          String?          @db.Text
+  createdById           String
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  createdBy         User                  @relation("NewsletterCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  template          NewsletterTemplate?   @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  coupon            Coupon?               @relation(fields: [couponId], references: [id], onDelete: SetNull)
+  recipients        NewsletterRecipient[]
+  links             NewsletterLink[]
+  consentLogs       EmailConsentLog[]
+  orders            Order[]
+  couponRedemptions CouponRedemption[]
+  alerts            NewsletterAlert[]
+
+  @@index([status, scheduledAt])
+  @@index([createdById, createdAt])
+  @@index([type, status])
+  @@index([updatedAt])
+}
+
+model NewsletterRecipient {
+  id                String                    @id @default(cuid())
+  campaignId        String
+  userId            String?
+  toEmail           String
+  toName            String?
+  status            NewsletterRecipientStatus @default(PENDING)
+  skipReason        String?
+  bounceType        String?
+  providerMessageId String?
+  attemptCount      Int                       @default(0)
+  errorMessage      String?                   @db.Text
+  openedAt          DateTime?
+  firstClickedAt    DateTime?
+  unsubscribedAt    DateTime?
+  isTest            Boolean                   @default(false)
+  sentAt            DateTime?
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+
+  campaign NewsletterCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  user     User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  links    NewsletterLink[]
+
+  @@unique([campaignId, userId])
+  @@unique([campaignId, toEmail])
+  @@index([toEmail, createdAt])
+  @@index([status, createdAt])
+  @@index([providerMessageId])
+}
+
+model NewsletterTemplate {
+  id          String         @id @default(cuid())
+  type        NewsletterType
+  name        String
+  contentJson Json
+  isBuiltIn   Boolean        @default(false)
+  createdById String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  createdBy User?                @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  campaigns NewsletterCampaign[]
+
+  @@index([type, isBuiltIn])
+}
+
+model NewsletterLink {
+  id               String   @id @default(cuid())
+  campaignId       String
+  recipientId      String?
+  token            String   @unique
+  targetUrl        String   @db.Text
+  clickCount       Int      @default(0)
+  uniqueClickCount Int      @default(0)
+  createdAt        DateTime @default(now())
+
+  campaign  NewsletterCampaign   @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  recipient NewsletterRecipient? @relation(fields: [recipientId], references: [id], onDelete: SetNull)
+  orders    Order[]
+
+  @@index([campaignId])
+  @@index([recipientId])
+}
+
+model EmailConsentLog {
+  id           String             @id @default(cuid())
+  userId       String?
+  email        String
+  consentType  EmailConsentType
+  action       EmailConsentAction
+  source       String
+  ip           String?
+  market       String?
+  termsVersion String?
+  campaignId   String?
+  createdAt    DateTime           @default(now())
+
+  user     User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
+  campaign NewsletterCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([email, createdAt])
+  @@index([campaignId])
+}
+
+model NewsletterAlert {
+  id         String              @id @default(cuid())
+  type       NewsletterAlertType @default(INFO)
+  title      String
+  message    String              @db.Text
+  campaignId String?
+  readAt     DateTime?
+  createdAt  DateTime            @default(now())
+
+  campaign NewsletterCampaign? @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([readAt, createdAt])
+  @@index([campaignId])
+}
+
+model NewsletterAutomation {
+  id        String   @id @default(cuid())
+  courseId  String   @unique
+  name      String
+  enabled   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  course      Course                           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  steps       NewsletterAutomationStep[]
+  enrollments NewsletterAutomationEnrollment[]
+
+  @@index([enabled])
+}
+
+model NewsletterAutomationStep {
+  id              String   @id @default(cuid())
+  automationId    String
+  stepOrder       Int
+  delayDays       Int      @default(0)
+  delayHours      Int      @default(0)
+  subjectTemplate String
+  contentJson     Json
+  enabled         Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  automation NewsletterAutomation           @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  deliveries NewsletterAutomationDelivery[]
+
+  @@unique([automationId, stepOrder])
+  @@index([automationId, enabled, stepOrder])
+}
+
+model NewsletterAutomationEnrollment {
+  id           String   @id @default(cuid())
+  userId       String
+  automationId String
+  orderId      String
+  enrolledAt   DateTime
+
+  user       User                           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  automation NewsletterAutomation           @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  order      Order                          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  deliveries NewsletterAutomationDelivery[]
+
+  @@unique([userId, automationId])
+  @@index([automationId, enrolledAt])
+  @@index([orderId])
+}
+
+model NewsletterAutomationDelivery {
+  id                String                             @id @default(cuid())
+  enrollmentId      String
+  stepId            String?
+  status            NewsletterAutomationDeliveryStatus @default(PENDING)
+  scheduledAt       DateTime
+  sentAt            DateTime?
+  providerMessageId String?
+  errorMessage      String?                            @db.Text
+  createdAt         DateTime                           @default(now())
+  updatedAt         DateTime                           @updatedAt
+
+  enrollment NewsletterAutomationEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  step       NewsletterAutomationStep?      @relation(fields: [stepId], references: [id], onDelete: SetNull)
+  opens      NewsletterAutomationOpen[]
+  clicks     NewsletterAutomationClick[]
+
+  @@unique([enrollmentId, stepId])
+  @@index([status, scheduledAt])
+  @@index([stepId])
+}
+
+model NewsletterAutomationOpen {
+  id         String   @id @default(cuid())
+  deliveryId String
+  userId     String
+  openedAt   DateTime @default(now())
+
+  delivery NewsletterAutomationDelivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  user     User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([deliveryId, openedAt])
+  @@index([userId, openedAt])
+}
+
+model NewsletterAutomationClick {
+  id         String   @id @default(cuid())
+  deliveryId String
+  userId     String
+  url        String   @db.Text
+  clickedAt  DateTime @default(now())
+
+  delivery NewsletterAutomationDelivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  user     User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([deliveryId, clickedAt])
+  @@index([userId, clickedAt])
+}
+
+enum PurchaseSource {
+  PAID // 付費購買
+  BUNDLE // 透過組合包購買授權
+  FREE_ENROLL // 免費課程自行加入
+  ADMIN_GRANT // 管理員手動授權
+  ADMIN_IMPORT // 批次匯入
+  SUBSCRIPTION // 課程訂閱制（每期扣款延展授權）
+}
+
+/**
+ * 到期提醒發送記錄
+ * 用於避免同一張 Purchase 的同一個天數提醒被重複寄送
+ */
+model CourseExpirationReminder {
+  id         String   @id @default(cuid())
+  purchaseId String
+  daysBefore Int // 發送時距到期還剩幾天（例：30、7、1、0 表示已過期）
+  sentAt     DateTime @default(now())
+
+  purchase Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+
+  @@unique([purchaseId, daysBefore])
+  @@index([sentAt])
+}
+
+model CourseWelcomeEmail {
+  id               String   @id @default(cuid())
+  courseId         String
+  planSlug         String   @default("basic")
+  enabled          Boolean  @default(false)
+  subjectTemplate  String
+  markdownTemplate String   @db.Text
+  updatedBy        String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, planSlug])
+  @@index([enabled])
+  @@index([planSlug])
+}
+
+model EmailDeliveryLog {
+  id                String              @id @default(cuid())
+  type              EmailDeliveryType
+  status            EmailDeliveryStatus @default(PENDING)
+  orderId           String?
+  userId            String?
+  courseId          String?
+  planSlug          String?
+  toEmail           String
+  subject           String
+  providerMessageId String?
+  errorMessage      String?             @db.Text
+  sentAt            DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  course Course? @relation(fields: [courseId], references: [id], onDelete: SetNull)
+
+  // 冪等鍵含 courseId：組合包訂單同一 orderId 下每門課各自獨立寄送一次（修正只寄第一門課的問題）
+  @@unique([type, orderId, courseId])
+  @@index([courseId, createdAt])
+  @@index([planSlug, createdAt])
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+}
+
+model GhostGrantLog {
+  id       String           @id @default(cuid())
+  orderId  String           @unique
+  userId   String
+  courseId String
+  planSlug String
+  email    String
+  status   GhostGrantStatus @default(PENDING)
+
+  ghostMemberId String?
+  ghostTierId   String?
+  expiresAt     DateTime?
+  errorMessage  String?   @db.Text
+  attempts      Int       @default(0)
+  grantedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, createdAt])
+  @@index([email])
+  @@index([courseId, planSlug])
+}
+
+model OrbivoGrantLog {
+  id       String            @id @default(cuid())
+  orderId  String            @unique
+  userId   String
+  courseId String
+  planSlug String
+  email    String
+  status   OrbivoGrantStatus @default(PENDING)
+
+  errorMessage String?   @db.Text
+  attempts     Int       @default(0)
+  grantedAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, createdAt])
+  @@index([email])
+}
+
+model GuestActivationToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([expiresAt])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([expiresAt])
+}
+
+// ==================== 媒體資源 ====================
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  ATTACHMENT
+}
+
+enum MediaSourceType {
+  MANUAL
+  LESSON_CONTENT
+  ASSIGNMENT
+  COMMENT
+  PRIVATE_MESSAGE
+  CLOUDFLARE_SYNC
+}
+
+model Media {
+  id           String    @id @default(cuid())
+  type         MediaType
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int // bytes
+  url          String
+
+  // Cloudflare Stream 專用
+  cfStreamId String? @unique // Cloudflare Stream UID
+  cfStatus   String? // ready, pending, error
+  bunnyVideoId String? @unique // Bunny Stream video GUID
+  bunnyStatus String? // processing, ready, failed
+  duration   Int? // 影片長度（秒）
+  thumbnail  String? // 縮圖 URL
+
+  uploadedBy String? // 上傳者 User ID
+  createdAt  DateTime @default(now())
+
+  allowDownload           Boolean @default(true)
+  dynamicWatermarkEnabled Boolean @default(false)
+  watermarkConfig         Json?
+
+  sourceType  MediaSourceType @default(MANUAL)
+  sourceId    String?
+  sourceLabel String?
+  sourceUrl   String?
+
+  @@index([type])
+  @@index([dynamicWatermarkEnabled])
+  @@index([sourceType])
+  @@index([sourceId])
+}
+
+// ==================== 系統設定 ====================
+
+model SiteSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt
+}
+
+// ==================== 管理員日誌 ====================
+
+enum AdminAction {
+  CREATE_COURSE
+  UPDATE_COURSE
+  DELETE_COURSE
+  CREATE_LESSON
+  UPDATE_LESSON
+  DELETE_LESSON
+  GRANT_ACCESS
+  REVOKE_ACCESS
+  EXTEND_ACCESS
+  PROCESS_REFUND
+  UPDATE_USER_ROLE
+  UPDATE_SETTINGS
+  CREATE_QUIZ
+  UPDATE_QUIZ
+  DELETE_QUIZ
+  CREATE_ASSIGNMENT
+  UPDATE_ASSIGNMENT
+  DELETE_ASSIGNMENT
+  REVIEW_ASSIGNMENT
+  UPDATE_EINVOICE_SETTINGS
+  ISSUE_INVOICE
+  VOID_INVOICE
+  ALLOWANCE_INVOICE
+  CREATE_COUPON
+  UPDATE_COUPON
+  TOGGLE_COUPON
+  DELETE_LESSON_COMMENT
+  CREATE_NEWSLETTER
+  UPDATE_NEWSLETTER
+  SEND_NEWSLETTER
+  SCHEDULE_NEWSLETTER
+  PAUSE_NEWSLETTER
+  CANCEL_NEWSLETTER
+  DUPLICATE_NEWSLETTER
+  EXPORT_NEWSLETTER
+  ADMIN_OVERRIDE_CONSENT
+  CANCEL_SUBSCRIPTION
+}
+
+model AdminLog {
+  id         String      @id @default(cuid())
+  adminId    String
+  action     AdminAction
+  targetType String? // Course, User, Order, etc.
+  targetId   String?
+  details    Json? // 額外資訊
+  ipAddress  String?
+  createdAt  DateTime    @default(now())
+
+  admin User @relation(fields: [adminId], references: [id])
+
+  @@index([adminId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+// ==================== 舊版銷售客服資料（保留資料庫相容性） ====================
+
+model SalesChat {
+  id         String   @id @default(cuid())
+  courseId   String?
+  courseSlug String
+  sessionId  String
+  messages   Json
+  userEmail  String?
+  userAgent  String?  @db.Text
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  course Course? @relation(fields: [courseId], references: [id], onDelete: SetNull)
+
+  @@index([courseSlug, createdAt])
+  @@index([sessionId])
+  @@index([createdAt])
+}
+
+enum InquiryStatus {
+  PENDING
+  REPLIED
+  CLOSED
+}
+
+model SalesInquiry {
+  id         String        @id @default(cuid())
+  courseId   String?
+  courseSlug String
+  name       String?
+  email      String
+  question   String        @db.Text
+  adminReply String?       @db.Text
+  repliedAt  DateTime?
+  repliedBy  String?
+  status     InquiryStatus @default(PENDING)
+  notifiedAt DateTime?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  course Course? @relation(fields: [courseId], references: [id], onDelete: SetNull)
+
+  @@index([courseSlug, createdAt])
+  @@index([status, createdAt])
+  @@index([email, createdAt])
+  @@index([createdAt])
+}
+
+// ==================== 登入嘗試紀錄 ====================
+
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  email     String
+  ipAddress String
+  success   Boolean
+  userAgent String?  @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([email, createdAt])
+  @@index([ipAddress, createdAt])
+  @@index([createdAt])
+}
+
+// ==================== 單元測驗系統 ====================
+
+enum QuizQuestionType {
+  SINGLE_CHOICE // 單選題
+  MULTIPLE_CHOICE // 多選題
+  TRUE_FALSE // 是非題
+  FILL_IN_BLANK // 填空題
+}
+
+enum ShowAnswersStrategy {
+  IMMEDIATELY // 送出後立即顯示
+  AFTER_PASS // 通過後才顯示
+  NEVER // 永不顯示
+}
+
+model Quiz {
+  id       String @id @default(cuid())
+  lessonId String @unique
+
+  passingScore     Int                 @default(60) // 及格分數 (0-100)
+  timeLimitMinutes Int? // 作答時間限制（分鐘），null = 不限時
+  shuffleQuestions Boolean             @default(false) // 題目順序隨機
+  shuffleOptions   Boolean             @default(false) // 選項順序隨機
+  showAnswers      ShowAnswersStrategy @default(IMMEDIATELY) // 答案顯示策略
+  blockNextLesson  Boolean             @default(false) // 未通過阻擋後續單元
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lesson    Lesson         @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  questions QuizQuestion[]
+  attempts  QuizAttempt[]
+}
+
+model QuizQuestion {
+  id     String @id @default(cuid())
+  quizId String
+
+  type          QuizQuestionType
+  content       String           @db.Text // 題幹
+  options       Json? // 選項陣列 [{ id: string, text: string }]（選擇題/是非題用）
+  correctAnswer Json // 正確答案（單選: string, 多選: string[], 是非: boolean, 填空: string[]）
+  explanation   String?          @db.Text // 答案解析（選填）
+  points        Int              @default(1) // 分數權重
+  order         Int              @default(0) // 排序
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  @@index([quizId, order])
+}
+
+model QuizAttempt {
+  id     String  @id @default(cuid())
+  quizId String?
+  userId String
+
+  answers          Json // 學員的答案 { [questionId]: answer }
+  score            Int // 得分 (0-100)
+  passed           Boolean // 是否通過
+  timeTakenSeconds Int? // 實際作答秒數
+  startedAt        DateTime @default(now())
+  submittedAt      DateTime @default(now())
+
+  quiz Quiz? @relation(fields: [quizId], references: [id], onDelete: SetNull)
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([quizId, userId])
+  @@index([userId, quizId])
+}
+
+// ==================== 單元作業系統 ====================
+
+enum AssignmentSubmissionType {
+  TEXT // 純文字
+  IMAGE // 圖片
+  FILE // 檔案
+  MIXED // 混合（文字 + 圖片 + 檔案）
+}
+
+enum AssignmentEditorMode {
+  PLAIN // 純文字
+  MARKDOWN // Markdown 編輯器
+}
+
+enum AssignmentGradingType {
+  PASS_FAIL // 通過 / 退回 / 不通過
+  PERCENTAGE // 百分制
+  LETTER_GRADE // 等第制
+}
+
+enum AssignmentSubmissionStatus {
+  DRAFT // 草稿
+  SUBMITTED // 已送出
+  UNDER_REVIEW // 批改中
+  APPROVED // 通過
+  NEEDS_REVISION // 退回修改
+  REJECTED // 不通過
+}
+
+enum AssignmentReviewStatus {
+  APPROVED // 通過
+  NEEDS_REVISION // 退回修改
+  REJECTED // 不通過
+}
+
+enum AssignmentAttachmentType {
+  IMAGE // 圖片
+  FILE // 一般檔案
+}
+
+model Assignment {
+  id       String @id @default(cuid())
+  lessonId String @unique
+
+  title       String
+  description String @db.Text // 作業說明（Markdown）
+
+  // 提交類型與限制
+  submissionType    AssignmentSubmissionType
+  editorMode        AssignmentEditorMode     @default(MARKDOWN)
+  minWords          Int? // 最少字數
+  maxWords          Int? // 最多字數
+  maxImages         Int?                     @default(10) // 最大圖片數量
+  maxImageSize      Int?                     @default(10485760) // 單張圖片大小上限 (bytes, 預設 10MB)
+  maxFiles          Int?                     @default(5) // 最大檔案數量
+  maxFileSize       Int?                     @default(10485760) // 單檔大小上限 (bytes, 預設 10MB)
+  allowedExtensions Json? // 允許的副檔名 string[]（null = 使用預設白名單）
+
+  // 評分設定
+  gradingType  AssignmentGradingType @default(PASS_FAIL)
+  passingScore Int?                  @default(60) // 百分制的及格分數
+
+  // 時間與重交
+  deadline            DateTime? // 截止日期
+  allowLateSubmission Boolean   @default(false) // 允許遲交
+  allowResubmission   Boolean   @default(true) // 允許重新提交
+
+  // 自動清理
+  autoCleanupDays Int? // 通過後 N 天自動刪除附件（null = 不清理）
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lesson      Lesson                 @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  submissions AssignmentSubmission[]
+  drafts      AssignmentDraft[]
+}
+
+model AssignmentSubmission {
+  id           String @id @default(cuid())
+  assignmentId String
+  userId       String
+
+  // 文字內容
+  content       String?               @db.Text // 文字作業內容
+  contentFormat AssignmentEditorMode? // 內容格式
+  wordCount     Int? // 字數
+
+  // 狀態
+  status         AssignmentSubmissionStatus @default(DRAFT)
+  revisionNumber Int                        @default(1) // 第幾次提交
+  isLate         Boolean                    @default(false) // 是否遲交
+  submittedAt    DateTime? // 送出時間
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assignment  Assignment             @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  user        User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attachments AssignmentAttachment[]
+  reviews     AssignmentReview[]
+
+  @@index([assignmentId, userId])
+  @@index([assignmentId, status])
+  @@index([userId])
+}
+
+model AssignmentAttachment {
+  id           String @id @default(cuid())
+  submissionId String
+
+  filename      String
+  mimeType      String
+  size          Int // bytes
+  url           String
+  storageKey    String
+  storageDriver String // 'local' | 's3'
+  type          AssignmentAttachmentType
+
+  createdAt DateTime @default(now())
+
+  submission AssignmentSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId])
+}
+
+model AssignmentReview {
+  id           String @id @default(cuid())
+  submissionId String
+  reviewerId   String
+
+  status      AssignmentReviewStatus
+  feedback    String?                @db.Text // 整體評語
+  score       Int? // 百分制分數 (0-100)
+  letterGrade String? // 等第 (A/B/C/D/F)
+  reviewedAt  DateTime               @default(now())
+
+  createdAt DateTime @default(now())
+
+  submission AssignmentSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  reviewer   User                 @relation(fields: [reviewerId], references: [id])
+
+  @@index([submissionId])
+  @@index([reviewerId])
+}
+
+model AssignmentDraft {
+  id           String @id @default(cuid())
+  assignmentId String
+  userId       String
+
+  content       String?               @db.Text // 草稿文字內容
+  contentFormat AssignmentEditorMode? // 內容格式
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([assignmentId, userId])
+  @@index([userId])
+}

@@ -1,0 +1,19 @@
+# .git 刻意不排除:builder 階段需要它算出 git commit SHA(見 Dockerfile
+# 與 openspec/changes/fix-zeabur-deploy-target-mismatch/design.md)。
+# .git 不會進到最終 runner 映像檔,只在中繼 builder 階段短暫存在。
+.next
+node_modules
+.claude
+.agents
+.gstack
+.pnpm-store
+.env
+.env.local
+.env.production
+.env.prod
+.realms-deploy.json
+coverage
+dist
+out
+tsconfig.tsbuildinfo
+.DS_Store

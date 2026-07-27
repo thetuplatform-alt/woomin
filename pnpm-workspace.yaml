@@ -1,0 +1,29 @@
+packages:
+  - "."
+
+# Jest 間接依賴的此版本已鎖定並通過測試；允許正式建置在發布後 24 小時內重現 lockfile。
+minimumReleaseAgeExclude:
+  - "@sinclair/typebox@0.34.51"
+
+overrides:
+  prosemirror-model: 1.25.9
+  prosemirror-transform: 1.12.0
+  prosemirror-view: 1.41.9
+
+allowBuilds:
+  '@prisma/engines': true
+  core-js: true
+  msw: true
+  prisma: true
+  protobufjs: true
+  sharp: true
+  unrs-resolver: true
+
+onlyBuiltDependencies:
+  - "@prisma/engines"
+  - "core-js"
+  - "msw"
+  - "prisma"
+  - "protobufjs"
+  - "sharp"
+  - "unrs-resolver"

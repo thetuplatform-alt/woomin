@@ -1,0 +1,4 @@
+# ALTER TYPE ADD VALUE 不能在 transaction 中執行（PostgreSQL < 12）
+# Prisma migrate deploy 會讀取此設定，以 non-transactional 模式執行
+[run]
+transaction = false
