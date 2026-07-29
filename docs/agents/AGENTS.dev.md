@@ -18,7 +18,7 @@
 
 - **Skill 位置**：[`.claude/skills/onboarding/SKILL.md`](.claude/skills/onboarding/SKILL.md)（發布打包來源同步在 `.agents/skills/onboarding/SKILL.md`）
 - **涵蓋範圍**：Zeabur 登入、租伺服器、建專案、開資料庫、兩段式部署、**掛永久硬碟到 `/data`**、網址綁定、Email 設定，以及後續版本更新 / 重部署 / 升級的全流程。
-- **這份 skill 是「一條龍上線」的唯一事實來源**，內含每個階段的地雷 SOP 與冪等狀態追蹤（`.realms-deploy.json`）。
+- **這份 skill 是「一條龍上線」的唯一事實來源**，內含每個階段的地雷 SOP 與冪等狀態追蹤（專案根目錄的部署狀態檔）。
 
 > ⛔️ **上線完成的硬性條件**：skill 的「階段 9.9 最終驗收清單」共 10 項，**每一項都必須實際跑出 PASS** 才算上線完成；任一項 FAIL 就不准宣稱「部署完成」。
 >

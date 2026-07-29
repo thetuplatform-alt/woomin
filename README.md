@@ -1,4 +1,4 @@
-# Course Realms
+# WooMin
 
 這是一個以 `Next.js 15 + Prisma 7` 建構的課程販售平台，現在採用 `Simple-first` 架構：
 
