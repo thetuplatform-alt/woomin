@@ -11,7 +11,7 @@ import { format } from 'date-fns'
 import { zhTW } from 'date-fns/locale'
 import { Streamdown } from 'streamdown'
 import type { Media } from '@prisma/client'
-import { getVimeoEmbedUrl, getYouTubeEmbedUrl } from '@/lib/video-source'
+import { UnifiedVideoPlayer } from '@/components/main/player/unified-video-player'
 import { useCourseEditor } from '@/lib/contexts/course-editor-context'
 import { updateLesson } from '@/lib/actions/curriculum'
 import { MediaPicker } from '@/components/admin/media/media-picker'
@@ -60,14 +60,6 @@ function DeferredEditorLoading({ label }: { label: string }) {
   )
 }
 
-const DeferredVideoPlayer = dynamic(
-  () => import('@/components/main/player/video-player').then((m) => m.VideoPlayer),
-  {
-    ssr: false,
-    loading: () => <DeferredEditorLoading label="正在載入影片預覽" />,
-  }
-)
-
 const DeferredQuizEditor = dynamic(
   () => import('@/components/admin/quiz/quiz-editor').then((m) => m.QuizEditor),
   {
@@ -100,23 +92,17 @@ function EmptyState() {
 interface PreviewPanelProps {
   videoProvider: 'youtube' | 'cloudflare' | 'vimeo' | 'bunny' | null
   videoSourceId: string | null
-  videoUrl: string | null
   videoId: string | null
   content: string | null
   title: string
-  lessonId: string
-  streamCustomerCode?: string
 }
 
 function PreviewPanel({
   videoProvider,
   videoSourceId,
-  videoUrl,
   videoId,
   content,
   title,
-  lessonId,
-  streamCustomerCode,
 }: PreviewPanelProps) {
   const effectiveVideoId = videoSourceId ?? videoId
 
@@ -124,32 +110,12 @@ function PreviewPanel({
     <div className="h-full overflow-y-auto">
       {/* 影片預覽 */}
       <div className="aspect-video bg-black">
-        {effectiveVideoId ? (
-          videoProvider === 'youtube' || videoProvider === 'vimeo' || videoProvider === 'bunny' ? (
-            <DeferredVideoPlayer
+        {effectiveVideoId && videoProvider ? (
+            <UnifiedVideoPlayer
               videoProvider={videoProvider}
               videoSourceId={effectiveVideoId}
-              videoUrl={
-                videoUrl ||
-                (videoProvider === 'bunny'
-                  ? null
-                  : videoProvider === 'youtube'
-                    ? getYouTubeEmbedUrl(effectiveVideoId)
-                    : getVimeoEmbedUrl(effectiveVideoId))
-              }
-              videoId={null}
               title={title}
-              lessonId={lessonId}
-              trackingEnabled={false}
             />
-          ) : (
-            <iframe
-              src={`https://customer-${streamCustomerCode}.cloudflarestream.com/${effectiveVideoId}/iframe`}
-              className="w-full h-full"
-              allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture"
-              allowFullScreen
-            />
-          )
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <div className="text-center text-white/60">
@@ -538,11 +504,11 @@ export function SettingsPreviewPanel({
           </TabsList>
         </div>
 
-        <TabsContent value="settings" className="flex-1 m-0 overflow-hidden">
+        <TabsContent value="settings" forceMount className="flex-1 m-0 overflow-hidden">
           <SettingsPanel streamCustomerCode={streamCustomerCode} />
         </TabsContent>
 
-        <TabsContent value="preview" className="flex-1 m-0 overflow-hidden">
+        <TabsContent value="preview" forceMount className="flex-1 m-0 overflow-hidden">
           <PreviewPanel
             videoProvider={
               selectedLesson.videoProvider?.toLowerCase() === 'youtube'
@@ -556,12 +522,9 @@ export function SettingsPreviewPanel({
                   : null
             }
             videoSourceId={selectedLesson.videoSourceId ?? null}
-            videoUrl={selectedLesson.videoUrl ?? null}
             videoId={selectedLesson.videoId}
             content={selectedLesson.content}
             title={selectedLesson.title}
-            lessonId={selectedLesson.id}
-            streamCustomerCode={streamCustomerCode}
           />
         </TabsContent>
 

@@ -415,6 +415,9 @@ export function PlayerLayout({
                 title={lesson.title}
                 lessonId={lesson.id}
                 videoDuration={lesson.videoDuration}
+                subtitleUrl={lesson.subtitleUrl}
+                subtitleLang={lesson.subtitleLang}
+                subtitleLabel={lesson.subtitleLabel}
                 onComplete={handleVideoComplete}
                 onTimeUpdate={setCurrentVideoTime}
                 watermark={watermark}

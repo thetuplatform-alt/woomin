@@ -48,7 +48,7 @@ describe('admin navigation performance boundaries', () => {
 
     const contentPageSource = readProjectFile('app/(admin)/admin/courses/[id]/content/page.tsx')
     expect(contentPageSource).toContain(
-      'const [cloudflareStream, geminiSetting] = await Promise.all'
+      'const [cloudflareStatus, cloudflareStream, geminiSetting] = await Promise.all'
     )
     expect(contentPageSource).toContain('getCloudflareStreamConfigStatus()')
     expect(contentPageSource).toContain('prisma.siteSetting.findUnique')

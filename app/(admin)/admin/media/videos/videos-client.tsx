@@ -29,6 +29,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { GetMediaResult } from '@/lib/actions/media'
+import { shouldShowCloudflareSyncButton } from '@/lib/video-provider-ui'
 
 interface CloudflareSyncResponse {
   success: boolean
@@ -284,16 +285,18 @@ export function VideosClient({
           />
         </div>
 
-        <Button
-          variant="outline"
-          onClick={handleSyncCloudflare}
-          disabled={provider !== 'cloudflare' || isSyncing || !isCloudflareStreamConfigured}
-          className="rounded-lg border-divider text-body hover:bg-surface hover:text-heading"
-          title="從 Cloudflare 抓回直接上傳的影片"
-        >
-          <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
-          {isSyncing ? '同步中...' : '同步 Cloudflare 影片'}
-        </Button>
+        {shouldShowCloudflareSyncButton(provider) && (
+          <Button
+            variant="outline"
+            onClick={handleSyncCloudflare}
+            disabled={isSyncing || !isCloudflareStreamConfigured}
+            className="rounded-lg border-divider text-body hover:bg-surface hover:text-heading"
+            title="從 Cloudflare 抓回直接上傳的影片"
+          >
+            <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+            {isSyncing ? '同步中...' : '同步 Cloudflare 影片'}
+          </Button>
+        )}
 
         <Dialog open={showUploadDialog} onOpenChange={handleUploadDialogClose}>
           <DialogTrigger asChild>

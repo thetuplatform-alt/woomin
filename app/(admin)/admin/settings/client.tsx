@@ -1,16 +1,14 @@
 'use client'
 
+import { useState } from 'react'
 import { Layout, Mail, Shield, Sparkles, HardDrive } from 'lucide-react'
 import { SiteSettingsForm } from '@/components/admin/settings/site-settings-form'
 import { AnalyticsSettingsForm } from '@/components/admin/settings/analytics-settings-form'
 import {
-  CloudflareStreamSettingsForm,
-  type CloudflareStreamSettingsViewData,
-} from '@/components/admin/settings/cloudflare-stream-settings-form'
-import {
-  BunnyStreamSettingsForm,
-  type BunnyStreamSettingsViewData,
-} from '@/components/admin/settings/bunny-stream-settings-form'
+  VideoProviderSettingsForm,
+} from '@/components/admin/settings/video-provider-settings-form'
+import type { CloudflareStreamSettingsViewData } from '@/components/admin/settings/cloudflare-stream-settings-form'
+import type { BunnyStreamSettingsViewData } from '@/components/admin/settings/bunny-stream-settings-form'
 import { EmailSettingsForm } from '@/components/admin/settings/email-settings-form'
 import { SocialLoginSettingsForm } from '@/components/admin/settings/social-login-settings-form'
 import { LayoutSettingsForm } from '@/components/admin/settings/layout-settings-form'
@@ -18,6 +16,7 @@ import { AISettingsForm } from '@/components/admin/settings/ai-settings-form'
 import { SettingsSidebarNav } from '@/components/admin/settings/settings-sidebar-nav'
 import { Badge } from '@/components/ui/badge'
 import { SETTING_KEYS } from '@/lib/validations/settings'
+import { getSettingsSectionClass } from '@/lib/settings-page-tabs'
 
 interface SettingsPageClientProps {
   siteSettings: Record<string, string>
@@ -116,6 +115,7 @@ export function SettingsPageClient({
   cloudflareStreamSettings,
   bunnyStreamSettings,
 }: SettingsPageClientProps) {
+  const [activeSection, setActiveSection] = useState('basic')
   const currentStorageDriver =
     (siteSettings[SETTING_KEYS.STORAGE_DRIVER] as 'local' | 's3') ||
     detectedDefaults.storageDriver
@@ -133,23 +133,39 @@ export function SettingsPageClient({
       </div>
 
       <div className="sticky top-0 z-10 -mx-4 bg-background px-4 pt-2 md:hidden">
-        <SettingsSidebarNav variant="horizontal" />
+        <SettingsSidebarNav
+          variant="horizontal"
+          activeSection={activeSection}
+          onSectionChange={setActiveSection}
+        />
       </div>
 
       <div className="flex gap-8">
         <aside className="hidden w-56 shrink-0 md:block" data-tour="settings-section-nav">
           <div className="sticky top-20">
-            <SettingsSidebarNav />
+            <SettingsSidebarNav
+              activeSection={activeSection}
+              onSectionChange={setActiveSection}
+            />
           </div>
         </aside>
 
         <div className="min-w-0 flex-1 space-y-16">
-          <SiteSettingsForm
-            initialSettings={siteSettings}
-            detectedDefaults={detectedDefaults}
-          />
+          <section
+            id="section-basic"
+            className={getSettingsSectionClass(activeSection, 'basic')}
+          >
+            <SiteSettingsForm
+              initialSettings={siteSettings}
+              detectedDefaults={detectedDefaults}
+            />
+          </section>
 
-          <section id="section-media" data-tour="settings-media-status">
+          <section
+            id="section-media"
+            data-tour="settings-media-status"
+            className={getSettingsSectionClass(activeSection, 'media')}
+          >
             <SectionHeader
               icon={HardDrive}
               title="影音設定"
@@ -200,35 +216,31 @@ export function SettingsPageClient({
                 </div>
               </div>
 
-              <div className="rounded-xl border border-divider bg-white p-6">
-                <div className="mb-6">
-                  <h3 className="text-base font-semibold text-heading">
-                    Cloudflare Stream 設定
-                  </h3>
-                  <p className="mt-1 text-sm text-body">
-                    完成後可直接上傳平台託管影片、使用受保護播放，並接收影片轉檔通知。
-                  </p>
-                </div>
-                <CloudflareStreamSettingsForm
-                  initialData={cloudflareStreamSettings}
-                />
-              </div>
-              <div className="rounded-xl border border-divider bg-white p-6">
-                <div className="mb-6">
-                  <h3 className="text-base font-semibold text-heading">Bunny Stream 設定</h3>
-                  <p className="mt-1 text-sm text-body">設定 Bunny 影片庫，憑證會加密保存。</p>
-                </div>
-                <BunnyStreamSettingsForm initialData={bunnyStreamSettings} />
-              </div>
+              <VideoProviderSettingsForm
+                initialProvider={
+                  (siteSettings[SETTING_KEYS.VIDEO_PROVIDER] as 'youtube' | 'cloudflare' | 'bunny') ||
+                  detectedDefaults.videoProvider
+                }
+                cloudflareStreamSettings={cloudflareStreamSettings}
+                bunnyStreamSettings={bunnyStreamSettings}
+              />
             </div>
           </section>
 
-          <AnalyticsSettingsForm
-            initialSettings={siteSettings}
-            detectedDefaults={detectedDefaults}
-          />
+          <section
+            id="section-analytics"
+            className={getSettingsSectionClass(activeSection, 'analytics')}
+          >
+            <AnalyticsSettingsForm
+              initialSettings={siteSettings}
+              detectedDefaults={detectedDefaults}
+            />
+          </section>
 
-          <section id="section-layout">
+          <section
+            id="section-layout"
+            className={getSettingsSectionClass(activeSection, 'layout')}
+          >
             <SectionHeader
               icon={Layout}
               title="版面設定"
@@ -239,7 +251,11 @@ export function SettingsPageClient({
             </div>
           </section>
 
-          <section id="section-email" data-tour="settings-email-section">
+          <section
+            id="section-email"
+            data-tour="settings-email-section"
+            className={getSettingsSectionClass(activeSection, 'email')}
+          >
             <SectionHeader
               icon={Mail}
               title="Email 設定"
@@ -262,7 +278,10 @@ export function SettingsPageClient({
             />
           </section>
 
-          <section id="section-social-login">
+          <section
+            id="section-social-login"
+            className={getSettingsSectionClass(activeSection, 'social-login')}
+          >
             <SectionHeader
               icon={Shield}
               title="登入方式"
@@ -271,7 +290,11 @@ export function SettingsPageClient({
             <SocialLoginSettingsForm initialData={socialLoginSettings} />
           </section>
 
-          <section id="section-ai" data-tour="settings-ai-section">
+          <section
+            id="section-ai"
+            data-tour="settings-ai-section"
+            className={getSettingsSectionClass(activeSection, 'ai')}
+          >
             <SectionHeader
               icon={Sparkles}
               title="AI 設定"

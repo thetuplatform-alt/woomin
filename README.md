@@ -55,13 +55,45 @@ pnpm dev
 ## Zeabur 部署建議
 
 - App Service 掛上 PostgreSQL，提供 `DATABASE_URL`
-- 額外掛一個 volume 到 `/data/uploads`
+- 額外掛一個 persistent volume 到 `/data`（應用程式會在其下使用 `/data/uploads`）
+- `APP_URL` 與 `NEXT_PUBLIC_APP_URL` 都要填正式 HTTPS 網址，並在 Zeabur 標記為 **build-time 變數**；這兩項會在 Docker build 時寫入 Server Actions 的 origin 白名單
 - 不需要先準備 S3、Cloudflare Stream、SMTP 或 OAuth 憑證
 
 若之後要啟用進階功能，可在以下位置補設定：
 
 - `/admin/setup`
 - `/admin/settings`
+
+## 排程機制
+
+Zeabur 不會自動替客戶執行這個 repo 的 cron route。請在一台能長時間運作、可以連到正式網址的主機上執行一次安裝腳本；腳本會建立一個 curl-loop worker，不需要另開一個付費 Zeabur 服務：
+
+```bash
+export APP_URL="https://example.com"
+export CRON_SECRET="與 App Service 相同的密鑰"
+./deploy/cron-worker/install.sh
+```
+
+worker 會每分鐘觸發電子報、作業附件清理、Cloudflare Stream 同步與自動化電子報；課程到期提醒與訂閱維運則預設每天觸發一次。若不安裝或主機重開後沒有讓 worker 自動啟動，到期提醒、扣款提醒、電子報佇列與附件清理都可能停止。
+
+如果安裝腳本顯示主機沒有 `systemd`，macOS 請用內建的 `launchd`。先建立設定檔：
+
+```bash
+mkdir -p "$HOME/Library/LaunchAgents"
+cat > "$HOME/Library/LaunchAgents/me.woomin.cron-worker.plist" <<'PLIST'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>me.woomin.cron-worker</string>
+  <key>ProgramArguments</key><array><string>/bin/sh</string><string>-c</string><string>. "$HOME/.config/woomin/cron-worker.env" &amp;&amp; "$HOME/.local/bin/woomin-cron-worker.sh"</string></array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+</dict></plist>
+PLIST
+launchctl load "$HOME/Library/LaunchAgents/me.woomin.cron-worker.plist"
+```
+
+看到 `launchd` 已載入後，worker 會在登入時自動啟動；要停止它可執行 `launchctl unload "$HOME/Library/LaunchAgents/me.woomin.cron-worker.plist"`。
 
 ## 常用指令
 
@@ -75,6 +107,8 @@ pnpm prisma db push
 pnpm prisma studio
 pnpm admin:init <email>
 ```
+
+`pnpm build` 只負責產生 Prisma Client 與 Next.js build，不會連線資料庫或修改資料。Docker 容器啟動時才會執行 migration 與設定同步。
 
 ## 進階整合
 

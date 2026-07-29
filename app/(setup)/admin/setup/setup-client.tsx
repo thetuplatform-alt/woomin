@@ -46,11 +46,8 @@ interface SetupClientProps {
     localStorageRoot: string
     hasObjectStorageEnv: boolean
     hasCloudflareStreamEnv: boolean
-    cloudflareAccountId: string
-    cloudflareApiToken: string
-    cloudflareStreamCustomerCode: string
-    cloudflareStreamSigningSecret: string
-    cloudflareStreamWebhookSecret: string
+    hasCloudflareSigningEnv: boolean
+    hasCloudflareWebhookEnv: boolean
     emailPreConfigured: boolean
     emailPreConfiguredProvider: 'resend' | 'smtp' | 'zsend' | 'tosend' | null
     emailPreConfiguredDomain: string
@@ -108,18 +105,11 @@ export function SetupClient({ user, detectedDefaults }: SetupClientProps) {
   const [videoProvider, setVideoProvider] = useState<'youtube' | 'cloudflare' | 'bunny'>(
     detectedDefaults.videoProvider
   )
-  const [cloudflareAccountId, setCloudflareAccountId] = useState(
-    detectedDefaults.cloudflareAccountId
-  )
-  const [cloudflareApiToken, setCloudflareApiToken] = useState(
-    detectedDefaults.cloudflareApiToken
-  )
-  const [cloudflareStreamCustomerCode, setCloudflareStreamCustomerCode] =
-    useState(detectedDefaults.cloudflareStreamCustomerCode)
-  const [cloudflareStreamSigningSecret, setCloudflareStreamSigningSecret] =
-    useState(detectedDefaults.cloudflareStreamSigningSecret)
-  const [cloudflareStreamWebhookSecret, setCloudflareStreamWebhookSecret] =
-    useState(detectedDefaults.cloudflareStreamWebhookSecret)
+  const [cloudflareAccountId, setCloudflareAccountId] = useState('')
+  const [cloudflareApiToken, setCloudflareApiToken] = useState('')
+  const [cloudflareStreamCustomerCode, setCloudflareStreamCustomerCode] = useState('')
+  const [cloudflareStreamSigningSecret, setCloudflareStreamSigningSecret] = useState('')
+  const [cloudflareStreamWebhookSecret, setCloudflareStreamWebhookSecret] = useState('')
   const [storageDriver, setStorageDriver] = useState<'local' | 's3'>(
     detectedDefaults.storageDriver
   )
@@ -150,17 +140,19 @@ export function SetupClient({ user, detectedDefaults }: SetupClientProps) {
   useEffect(() => {
     if (videoProvider !== 'cloudflare') return
 
-    if (!cloudflareStreamSigningSecret) {
+    if (!cloudflareStreamSigningSecret && !detectedDefaults.hasCloudflareSigningEnv) {
       setCloudflareStreamSigningSecret(generateSecret())
     }
 
-    if (!cloudflareStreamWebhookSecret) {
+    if (!cloudflareStreamWebhookSecret && !detectedDefaults.hasCloudflareWebhookEnv) {
       setCloudflareStreamWebhookSecret(generateSecret())
     }
   }, [
     videoProvider,
     cloudflareStreamSigningSecret,
     cloudflareStreamWebhookSecret,
+    detectedDefaults.hasCloudflareSigningEnv,
+    detectedDefaults.hasCloudflareWebhookEnv,
   ])
 
   const isLastStep = currentStep === STEPS.length - 1
@@ -348,7 +340,7 @@ export function SetupClient({ user, detectedDefaults }: SetupClientProps) {
                     <Input
                       value={cloudflareApiToken}
                       onChange={(event) => setCloudflareApiToken(event.target.value)}
-                      placeholder="請貼上可管理 Cloudflare Stream 的 API Token"
+                      placeholder={detectedDefaults.hasCloudflareStreamEnv ? '已偵測到設定；需要覆寫時再貼上新的 token' : '請貼上可管理 Cloudflare Stream 的 API Token'}
                       className="mt-3"
                     />
                     <p className="mt-2 text-xs text-caption">

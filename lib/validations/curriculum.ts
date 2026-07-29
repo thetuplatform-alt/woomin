@@ -79,6 +79,10 @@ export const lessonSchema = z.object({
     .optional()
     .nullable(),
 
+  subtitleUrl: z.string().max(2000).optional().nullable(),
+  subtitleLang: z.string().max(20).optional().nullable(),
+  subtitleLabel: z.string().max(100).optional().nullable(),
+
   // 是否免費試閱：選填，預設 false
   isFree: z.boolean().default(false),
 

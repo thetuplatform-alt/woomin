@@ -19,7 +19,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { AINotesDialog } from '@/components/admin/course-editor/ai-notes-dialog'
 import {
-  getVimeoEmbedUrl,
   getVimeoWatchUrl,
   getYouTubeEmbedUrl,
   parseVimeoVideoSource,
@@ -39,6 +38,8 @@ import {
   Plus,
   Link2,
 } from 'lucide-react'
+import { UnifiedVideoPlayer } from '@/components/main/player/unified-video-player'
+import { getVideoCaptionNotice } from '@/lib/video-caption-support'
 
 // 動態載入 Milkdown 編輯器（1MB+ ProseMirror 生態）：未選取單元前不付下載/解析成本，
 // 三欄編輯器外殼可即時互動。
@@ -54,26 +55,6 @@ const MilkdownMarkdownEditor = dynamic(
   }
 )
 
-const DeferredVideoPlayer = dynamic(
-  () => import('@/components/main/player/video-player').then((m) => m.VideoPlayer),
-  {
-    ssr: false,
-    loading: () => <DeferredEditorLoading label="正在載入影片預覽" />,
-  }
-)
-
-function DeferredEditorLoading({ label }: { label: string }) {
-  return (
-    <div
-      role="status"
-      aria-live="polite"
-      className="flex min-h-24 items-center justify-center text-sm text-caption"
-    >
-      {label}…
-    </div>
-  )
-}
-
 type EditorVideoProvider = 'youtube' | 'cloudflare' | 'vimeo' | 'bunny' | null
 
 interface LessonVideoState {
@@ -83,6 +64,12 @@ interface LessonVideoState {
   thumbnail: string | null
   duration: number | null
   legacyVideoId: string | null
+}
+
+interface LessonSubtitleState {
+  url: string | null
+  lang: string
+  label: string
 }
 
 function EmptyState() {
@@ -143,7 +130,6 @@ interface VideoSectionProps {
   value: LessonVideoState
   onChange: (next: LessonVideoState) => void
   streamCustomerCode?: string
-  lessonId: string
   title: string
   isCloudflareStreamConfigured: boolean
 }
@@ -152,7 +138,6 @@ function VideoSection({
   value,
   onChange,
   streamCustomerCode,
-  lessonId,
   title,
   isCloudflareStreamConfigured,
 }: VideoSectionProps) {
@@ -585,21 +570,17 @@ function VideoSection({
           {effectiveSourceId ? (
             <div className="space-y-3">
               <div className="aspect-video overflow-hidden rounded-lg bg-black">
-                <DeferredVideoPlayer
+                <UnifiedVideoPlayer
                   videoProvider="youtube"
                   videoSourceId={effectiveSourceId}
-                  videoUrl={value.url || getYouTubeEmbedUrl(effectiveSourceId)}
-                  videoId={null}
                   title={title}
-                  lessonId={lessonId}
-                  videoDuration={value.duration}
-                  trackingEnabled={false}
                 />
               </div>
               <div className="flex items-center gap-2 text-xs text-body">
                 <Link2 className="h-3 w-3" />
                 <span>YouTube ID: {effectiveSourceId}</span>
               </div>
+              <p className="text-xs text-amber-700">{getVideoCaptionNotice('youtube')}</p>
             </div>
           ) : null}
         </div>
@@ -634,15 +615,10 @@ function VideoSection({
           {effectiveSourceId ? (
             <div className="space-y-3">
               <div className="aspect-video overflow-hidden rounded-lg bg-black">
-                <DeferredVideoPlayer
+                <UnifiedVideoPlayer
                   videoProvider="vimeo"
                   videoSourceId={effectiveSourceId}
-                  videoUrl={value.url || getVimeoEmbedUrl(effectiveSourceId)}
-                  videoId={null}
                   title={title}
-                  lessonId={lessonId}
-                  videoDuration={value.duration}
-                  trackingEnabled={false}
                 />
               </div>
               <div className="flex items-center gap-2 text-xs text-body">
@@ -663,6 +639,7 @@ function VideoSection({
                   Vimeo ID: {effectiveSourceId}
                 </a>
               </div>
+              <p className="text-xs text-amber-700">{getVideoCaptionNotice('vimeo')}</p>
             </div>
           ) : null}
         </div>
@@ -682,12 +659,10 @@ function VideoSection({
                     </p>
                   </div>
                 ) : (
-                  <iframe
-                    src={`https://customer-${streamCustomerCode}.cloudflarestream.com/${effectiveSourceId}/iframe`}
-                    className="h-full w-full"
-                    allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture"
-                    allowFullScreen
-                    title="Cloudflare preview"
+                  <UnifiedVideoPlayer
+                    videoProvider="cloudflare"
+                    videoSourceId={effectiveSourceId}
+                    title={title}
                   />
                 )}
               </div>
@@ -779,21 +754,17 @@ function VideoSection({
       {value.provider === 'bunny' && effectiveSourceId && (
         <div className="space-y-3 rounded-xl border border-divider bg-white p-4">
           <div className="aspect-video overflow-hidden rounded-lg bg-black">
-            <DeferredVideoPlayer
+            <UnifiedVideoPlayer
               videoProvider="bunny"
               videoSourceId={effectiveSourceId}
-              videoUrl={value.url}
-              videoId={null}
               title={title}
-              lessonId={lessonId}
-              videoDuration={value.duration}
-              trackingEnabled={false}
             />
           </div>
           <div className="flex items-center gap-2 text-xs text-body">
             <Video className="h-3 w-3" />
             <span>Bunny Video ID: {effectiveSourceId}</span>
           </div>
+          <p className="text-xs text-amber-700">{getVideoCaptionNotice('bunny')}</p>
         </div>
       )}
 
@@ -847,6 +818,87 @@ function mapLessonVideo(selectedLesson: {
   }
 }
 
+function SubtitleSection({
+  lessonId,
+  provider,
+  value,
+  onChange,
+}: {
+  lessonId: string
+  provider: EditorVideoProvider
+  value: LessonSubtitleState
+  onChange: (value: LessonSubtitleState) => void
+}) {
+  const [isUploading, setIsUploading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const upload = async (file: File) => {
+    setError(null)
+    setIsUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('lang', value.lang)
+      formData.append('label', value.label)
+      const response = await fetch(`/api/admin/lessons/${lessonId}/subtitle`, { method: 'POST', body: formData })
+      const result = await response.json()
+      if (!response.ok || !result.success) {
+        setError(result.error || '字幕上傳失敗')
+        return
+      }
+      onChange({
+        url: result.subtitle.subtitleUrl,
+        lang: result.subtitle.subtitleLang,
+        label: result.subtitle.subtitleLabel,
+      })
+      toast.success('字幕已上傳')
+    } catch {
+      setError('字幕上傳失敗')
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  const remove = async () => {
+    setError(null)
+    const response = await fetch(`/api/admin/lessons/${lessonId}/subtitle`, { method: 'DELETE' })
+    const result = await response.json()
+    if (!response.ok || !result.success) {
+      setError(result.error || '移除字幕失敗')
+      return
+    }
+    onChange({ url: null, lang: 'zh-TW', label: '繁體中文' })
+    toast.success('字幕已移除')
+  }
+
+  return (
+    <div className="space-y-3 rounded-xl border border-divider bg-white p-4">
+      <div>
+        <h3 className="text-sm font-medium text-heading">自訂字幕</h3>
+        <p className="mt-1 text-xs text-caption">接受 .vtt 或 .srt，檔案上限 5MB。</p>
+      </div>
+      {provider === 'bunny' ? (
+        <p className="rounded-md bg-amber-50 p-3 text-xs text-amber-800">Bunny 目前不支援自訂字幕，因為影片使用嵌入播放器。</p>
+      ) : (
+        <>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="space-y-1 text-xs text-body">語言代碼<Input value={value.lang} onChange={(event) => onChange({ ...value, lang: event.target.value })} placeholder="zh-TW" /></label>
+            <label className="space-y-1 text-xs text-body">顯示名稱<Input value={value.label} onChange={(event) => onChange({ ...value, label: event.target.value })} placeholder="繁體中文" /></label>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="inline-flex cursor-pointer items-center rounded-md border border-dashed border-divider px-3 py-2 text-xs text-body hover:border-cta">
+              <Upload className="mr-2 h-4 w-4" />{isUploading ? '上傳中…' : '選擇字幕檔'}
+              <input type="file" accept=".vtt,.srt,text/vtt,application/x-subrip" className="sr-only" disabled={isUploading} onChange={(event) => { const file = event.target.files?.[0]; event.currentTarget.value = ''; if (file) void upload(file) }} />
+            </label>
+            {value.url ? <><a href={value.url} target="_blank" rel="noreferrer" className="text-xs text-cta underline">目前字幕檔</a><Button type="button" variant="ghost" size="sm" onClick={() => void remove()} className="text-xs text-red-500">移除</Button></> : null}
+          </div>
+          {error ? <p className="text-xs text-red-500">{error}</p> : null}
+        </>
+      )}
+    </div>
+  )
+}
+
 interface LessonEditorPanelProps {
   streamCustomerCode?: string
   isGeminiConfigured?: boolean
@@ -876,6 +928,7 @@ export function LessonEditorPanel({
     legacyVideoId: null,
   })
   const [content, setContent] = useState('')
+  const [subtitle, setSubtitle] = useState<LessonSubtitleState>({ url: null, lang: 'zh-TW', label: '繁體中文' })
   const prevLessonIdRef = useRef<string | null>(null)
 
   useEffect(() => {
@@ -885,6 +938,7 @@ export function LessonEditorPanel({
       if (selectedLesson) {
         setVideo(mapLessonVideo(selectedLesson))
         setContent(selectedLesson.content ?? '')
+        setSubtitle({ url: selectedLesson.subtitleUrl, lang: selectedLesson.subtitleLang ?? 'zh-TW', label: selectedLesson.subtitleLabel ?? '繁體中文' })
       } else {
         setVideo({
           provider: null,
@@ -895,6 +949,7 @@ export function LessonEditorPanel({
           legacyVideoId: null,
         })
         setContent('')
+        setSubtitle({ url: null, lang: 'zh-TW', label: '繁體中文' })
       }
     }
   }, [selectedLesson, selectedLessonId])
@@ -911,7 +966,10 @@ export function LessonEditorPanel({
       videoUrl: next.url,
       videoThumbnail: next.thumbnail,
       videoId: next.legacyVideoId,
-      videoDuration: next.duration,
+        videoDuration: next.duration,
+        subtitleUrl: subtitle.url,
+        subtitleLang: subtitle.lang,
+        subtitleLabel: subtitle.label,
     })
   }
 
@@ -932,6 +990,9 @@ export function LessonEditorPanel({
         videoThumbnail: video.thumbnail ?? undefined,
         videoId: video.legacyVideoId ?? undefined,
         videoDuration: video.duration ?? undefined,
+        subtitleUrl: subtitle.url,
+        subtitleLang: subtitle.lang,
+        subtitleLabel: subtitle.label,
         content: content || undefined,
         isFree: selectedLesson.isFree,
         status: selectedLesson.status as 'PUBLISHED' | 'COMING_SOON',
@@ -950,6 +1011,9 @@ export function LessonEditorPanel({
           videoId: result.lesson.videoId,
           videoDuration: result.lesson.videoDuration,
           content: result.lesson.content,
+          subtitleUrl: result.lesson.subtitleUrl,
+          subtitleLang: result.lesson.subtitleLang,
+          subtitleLabel: result.lesson.subtitleLabel,
         })
         setIsDirty(false)
         toast.success('單元已儲存')
@@ -996,9 +1060,23 @@ export function LessonEditorPanel({
           value={video}
           onChange={handleVideoChange}
           streamCustomerCode={streamCustomerCode}
-          lessonId={selectedLesson.id}
           title={selectedLesson.title}
           isCloudflareStreamConfigured={isCloudflareStreamConfigured}
+        />
+
+        <SubtitleSection
+          lessonId={selectedLesson.id}
+          provider={video.provider}
+          value={subtitle}
+          onChange={(next) => {
+            setSubtitle(next)
+            setIsDirty(true)
+            updateLessonInCurriculum(selectedLesson.id, {
+              subtitleUrl: next.url,
+              subtitleLang: next.lang,
+              subtitleLabel: next.label,
+            })
+          }}
         />
 
         <div className="border-t border-divider" />

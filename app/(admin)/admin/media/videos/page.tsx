@@ -8,8 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { getMediaList } from '@/lib/actions/media'
 import { getActiveCloudVideoProvider } from '@/lib/actions/settings'
-import { getCloudflareStreamConfigStatus } from '@/lib/cloudflare-stream-config'
+import { getCloudflareStreamConfig } from '@/lib/cloudflare-stream-config'
 import { getBunnyStreamConfigStatus } from '@/lib/bunny-stream-config'
+import { getVideoLibrarySubtitle } from '@/lib/video-provider-ui'
 import { Film, ArrowLeft, Loader2 } from 'lucide-react'
 import { VideosClient } from './videos-client'
 
@@ -75,10 +76,11 @@ function LoadingState() {
 export default async function VideosPage({ searchParams }: VideosPageProps) {
   const params = await searchParams
   const activeProvider = (await getActiveCloudVideoProvider()) ?? 'cloudflare'
-  const cloudflareStream = await getCloudflareStreamConfigStatus()
+  const cloudflareStream = await getCloudflareStreamConfig()
   const bunnyStream = await getBunnyStreamConfigStatus()
   const isCloudflareStreamConfigured =
-    cloudflareStream.hasUploadConfig && cloudflareStream.hasPlaybackConfig
+    Boolean(cloudflareStream.accountId && cloudflareStream.apiToken) &&
+    Boolean(cloudflareStream.customerCode)
   const isProviderConfigured = activeProvider === 'cloudflare'
     ? isCloudflareStreamConfigured
     : bunnyStream.isConfigured
@@ -96,7 +98,7 @@ export default async function VideosPage({ searchParams }: VideosPageProps) {
           <div>
             <h2 className="text-xl font-bold text-heading">影片庫</h2>
             <p className="text-body mt-1">
-              管理上傳到平台、可重複綁定到課程單元的 Cloudflare Stream 與 Bunny Stream 影片
+              {getVideoLibrarySubtitle(activeProvider)}
             </p>
           </div>
         </div>

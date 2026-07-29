@@ -6,7 +6,10 @@ import { ContentLayout } from '@/components/admin/course-editor/content-layout'
 import { OutlinePanel } from '@/components/admin/course-editor/outline-panel'
 import { LessonEditorPanel } from '@/components/admin/course-editor/lesson-editor-panel'
 import { SettingsPreviewPanel } from '@/components/admin/course-editor/settings-preview-panel'
-import { getCloudflareStreamConfigStatus } from '@/lib/cloudflare-stream-config'
+import {
+  getCloudflareStreamConfig,
+  getCloudflareStreamConfigStatus,
+} from '@/lib/cloudflare-stream-config'
 import { prisma } from '@/lib/prisma'
 import { SETTING_KEYS } from '@/lib/validations/settings'
 
@@ -22,15 +25,16 @@ interface ContentPageProps {
 
 export default async function ContentPage({ params }: ContentPageProps) {
   const { id: courseId } = await params
-  const [cloudflareStream, geminiSetting] = await Promise.all([
+  const [cloudflareStatus, cloudflareStream, geminiSetting] = await Promise.all([
     getCloudflareStreamConfigStatus(),
+    getCloudflareStreamConfig(),
     prisma.siteSetting.findUnique({
       where: { key: SETTING_KEYS.GEMINI_API_KEY },
     }),
   ])
   const streamCustomerCode = cloudflareStream.customerCode
   const isCloudflareStreamConfigured =
-    cloudflareStream.hasUploadConfig && cloudflareStream.hasPlaybackConfig
+    cloudflareStatus.hasUploadConfig && cloudflareStatus.hasPlaybackConfig
 
   const isGeminiConfigured = !!geminiSetting?.value
 

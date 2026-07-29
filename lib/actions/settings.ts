@@ -50,6 +50,7 @@ import {
   getCloudVideoProviderFilter,
   getCloudVideoProviderSwitchWarning,
   normalizeCloudVideoProvider,
+  type CloudVideoProvider,
 } from '@/lib/video-provider-policy'
 
 // requireOnlyAdminAuth 從 @/lib/require-admin 引入（直接查 DB 確保角色即時生效）
@@ -161,6 +162,52 @@ export async function getActiveCloudVideoProvider() {
   return normalizeCloudVideoProvider(setting?.value)
 }
 
+/** 更新媒體庫生效的雲端影片方案。 */
+export async function updateVideoProviderSettings(
+  provider: CloudVideoProvider,
+  confirmVideoProviderSwitch = false
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await requireOnlyAdminAuth()
+
+    const nextProvider = normalizeCloudVideoProvider(provider)
+    if (!nextProvider) {
+      return { success: false, error: '影片方案無效' }
+    }
+
+    const currentProvider = await getActiveCloudVideoProvider()
+    if (
+      currentProvider &&
+      currentProvider !== nextProvider &&
+      !confirmVideoProviderSwitch
+    ) {
+      const otherProviderCount = await prisma.media.count({
+        where: {
+          type: 'VIDEO',
+          ...getCloudVideoProviderFilter(currentProvider),
+        },
+      })
+      if (otherProviderCount > 0) {
+        return {
+          success: false,
+          error: getCloudVideoProviderSwitchWarning(
+            currentProvider,
+            nextProvider,
+            otherProviderCount
+          ),
+        }
+      }
+    }
+
+    await upsertSetting(SETTING_KEYS.VIDEO_PROVIDER, nextProvider)
+    revalidatePath('/admin/settings')
+    revalidatePath('/admin/media/videos')
+    return { success: true }
+  } catch {
+    return { success: false, error: '影片方案儲存失敗' }
+  }
+}
+
 /**
  * 更新或建立設定
  */
@@ -184,37 +231,6 @@ export async function updateSiteSettings(
     // 驗證資料
     const validatedData = siteSettingsSchema.parse(data)
 
-    const currentProviderSetting = await prisma.siteSetting.findUnique({
-      where: { key: SETTING_KEYS.VIDEO_PROVIDER },
-      select: { value: true },
-    })
-    const currentCloudProvider = normalizeCloudVideoProvider(currentProviderSetting?.value)
-    const nextCloudProvider = normalizeCloudVideoProvider(validatedData.videoProvider)
-
-    if (
-      currentCloudProvider &&
-      nextCloudProvider &&
-      currentCloudProvider !== nextCloudProvider &&
-      !validatedData.confirmVideoProviderSwitch
-    ) {
-      const otherProviderCount = await prisma.media.count({
-        where: {
-          type: 'VIDEO',
-          ...getCloudVideoProviderFilter(currentCloudProvider),
-        },
-      })
-      if (otherProviderCount > 0) {
-        return {
-          success: false,
-          error: getCloudVideoProviderSwitchWarning(
-            currentCloudProvider,
-            nextCloudProvider,
-            otherProviderCount
-          ),
-        }
-      }
-    }
-
     // 更新設定
     await Promise.all([
       upsertSetting(SETTING_KEYS.SITE_NAME, validatedData.siteName),
@@ -227,7 +243,6 @@ export async function updateSiteSettings(
       upsertSetting(SETTING_KEYS.CONTACT_EMAIL, validatedData.contactEmail || ''),
       upsertSetting(SETTING_KEYS.BRAND_DISPLAY_NAME, validatedData.brandDisplayName || ''),
       upsertSetting(SETTING_KEYS.BRAND_SUBTITLE, validatedData.brandSubtitle || ''),
-      upsertSetting(SETTING_KEYS.VIDEO_PROVIDER, validatedData.videoProvider || 'youtube'),
       upsertSetting(SETTING_KEYS.STORAGE_DRIVER, validatedData.storageDriver || 'local'),
       upsertSetting(SETTING_KEYS.LOCAL_STORAGE_ROOT, validatedData.localStorageRoot || ''),
       upsertSetting(SETTING_KEYS.GA_ID, validatedData.gaId || ''),
@@ -289,7 +304,13 @@ export async function getCloudflareStreamSettings(): Promise<{
   // M16：Cloudflare Stream 憑證屬機敏設定，僅限 ADMIN（與其他設定一致）
   await requireOnlyAdminAuth()
 
-  const config = await getCloudflareStreamConfigStatus()
+  const config = await getCloudflareStreamConfig()
+  const status = {
+    hasUploadConfig: Boolean(config.accountId && config.apiToken),
+    hasPlaybackConfig: Boolean(config.customerCode),
+    hasSigningConfig: Boolean(config.signingSecret),
+    hasWebhookConfig: Boolean(config.webhookSecret),
+  }
 
   return {
     accountId: config.accountId,
@@ -297,10 +318,10 @@ export async function getCloudflareStreamSettings(): Promise<{
     apiTokenHint: config.apiToken ? maskSecret(config.apiToken) : '',
     signingSecretHint: config.signingSecret ? maskSecret(config.signingSecret) : '',
     webhookSecretHint: config.webhookSecret ? maskSecret(config.webhookSecret) : '',
-    isUploadConfigured: config.hasUploadConfig,
-    isPlaybackConfigured: config.hasPlaybackConfig,
-    isSigningConfigured: config.hasSigningConfig,
-    isWebhookConfigured: config.hasWebhookConfig,
+    isUploadConfigured: status.hasUploadConfig,
+    isPlaybackConfigured: status.hasPlaybackConfig,
+    isSigningConfigured: status.hasSigningConfig,
+    isWebhookConfigured: status.hasWebhookConfig,
   }
 }
 

@@ -376,6 +376,9 @@ export async function createLesson(
         videoUrl: normalizedVideo.videoUrl,
         videoThumbnail: normalizedVideo.videoThumbnail,
         videoDuration: normalizedVideo.videoDuration,
+        subtitleUrl: validatedData.subtitleUrl ?? null,
+        subtitleLang: validatedData.subtitleLang ?? null,
+        subtitleLabel: validatedData.subtitleLabel ?? null,
         isFree: validatedData.isFree ?? false,
         order: newOrder,
         // 製作中設定
@@ -454,6 +457,9 @@ export async function updateLesson(
         videoUrl: normalizedVideo.videoUrl,
         videoThumbnail: normalizedVideo.videoThumbnail,
         videoDuration: normalizedVideo.videoDuration,
+        subtitleUrl: validatedData.subtitleUrl ?? null,
+        subtitleLang: validatedData.subtitleLang ?? null,
+        subtitleLabel: validatedData.subtitleLabel ?? null,
         isFree: validatedData.isFree ?? false,
         // 製作中設定
         status: validatedData.status ?? 'PUBLISHED',

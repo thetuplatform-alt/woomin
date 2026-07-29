@@ -36,7 +36,6 @@ import { StickySaveBar } from '@/components/admin/shared/sticky-save-bar'
 interface SiteSettingsFormProps {
   initialSettings: Record<string, string>
   detectedDefaults: {
-    videoProvider: 'youtube' | 'cloudflare' | 'bunny'
     storageDriver: 'local' | 's3'
     localStorageRoot: string
   }
@@ -70,9 +69,6 @@ export function SiteSettingsForm({
       contactEmail: initialSettings[SETTING_KEYS.CONTACT_EMAIL] || '',
       brandDisplayName: initialSettings[SETTING_KEYS.BRAND_DISPLAY_NAME] || '',
       brandSubtitle: initialSettings[SETTING_KEYS.BRAND_SUBTITLE] || '',
-      videoProvider:
-        (initialSettings[SETTING_KEYS.VIDEO_PROVIDER] as 'youtube' | 'cloudflare' | 'bunny') ||
-        detectedDefaults.videoProvider,
       storageDriver:
         (initialSettings[SETTING_KEYS.STORAGE_DRIVER] as 'local' | 's3') ||
         detectedDefaults.storageDriver,
@@ -202,24 +198,6 @@ export function SiteSettingsForm({
   async function onSubmit(data: SiteSettingsFormData) {
     startTransition(async () => {
       const result = await updateSiteSettings(data)
-
-      if (!result.success && result.error?.includes('會從媒體庫隱藏')) {
-        const confirmed = window.confirm(`${result.error}\n\n要繼續切換嗎？`)
-        if (confirmed) {
-          const confirmedResult = await updateSiteSettings({
-            ...data,
-            confirmVideoProviderSwitch: true,
-          })
-          if (confirmedResult.success) {
-            toast.success('設定已儲存')
-            form.reset(data)
-            router.refresh()
-          } else {
-            toast.error(confirmedResult.error ?? '儲存失敗')
-          }
-        }
-        return
-      }
 
       if (result.success) {
         toast.success('設定已儲存')
@@ -619,55 +597,6 @@ export function SiteSettingsForm({
                   )}
                 />
               </div>
-            </CardContent>
-          </Card>
-        </section>
-
-        <section id="section-video-provider">
-          <Card className="rounded-xl border border-divider bg-white">
-            <CardHeader>
-              <CardTitle className="text-heading">影片方案</CardTitle>
-              <CardDescription className="text-body">
-                Cloudflare Stream 與 Bunny Stream 只會有一個出現在媒體庫；YouTube 與 Vimeo 課程單元不受影響。
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <FormField
-                control={form.control}
-                name="videoProvider"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-heading">媒體庫生效方案</FormLabel>
-                    <FormControl>
-                      <div className="grid gap-3 sm:grid-cols-3">
-                        {[
-                          ['youtube', 'YouTube', '課程單元直接貼網址。'],
-                          ['cloudflare', 'Cloudflare Stream', '媒體庫顯示並上傳 Cloudflare 影片。'],
-                          ['bunny', 'Bunny Stream', '媒體庫顯示並上傳 Bunny 影片。'],
-                        ].map(([value, label, description]) => (
-                          <button
-                            key={value}
-                            type="button"
-                            className={`rounded-lg border p-4 text-left transition-colors ${
-                              field.value === value
-                                ? 'border-cta bg-cta/5'
-                                : 'border-divider hover:bg-surface'
-                            }`}
-                            onClick={() => field.onChange(value)}
-                          >
-                            <span className="block font-medium text-heading">{label}</span>
-                            <span className="mt-1 block text-xs text-body">{description}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </FormControl>
-                    <FormDescription className="text-caption">
-                      切換時不會刪除影片，只會暫時從媒體庫列表隱藏另一方案的影片。
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </CardContent>
           </Card>
         </section>

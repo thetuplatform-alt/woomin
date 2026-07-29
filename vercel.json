@@ -1,5 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "_comment": "目前部署走 Zeabur/Docker；此檔案保留作為歷史 Vercel 備援設定，尚未驗證。",
   "crons": [
     {
       "path": "/api/cron/course-expiration",

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import {
   Settings,
   Layout,
@@ -30,31 +30,20 @@ const sections: SettingsSection[] = [
 
 interface SettingsSidebarNavProps {
   variant?: 'vertical' | 'horizontal'
+  activeSection: string
+  onSectionChange: (id: string) => void
 }
 
 export function SettingsSidebarNav({
   variant = 'vertical',
+  activeSection,
+  onSectionChange,
 }: SettingsSidebarNavProps) {
-  const [activeSection, setActiveSection] = useState('basic')
   const activeButtonRef = useRef<HTMLButtonElement>(null)
 
   const handleClick = useCallback((id: string) => {
-    const element = document.getElementById(`section-${id}`)
-    if (!element) {
-      return
-    }
-
-    const scrollContainer = element.closest('main') ?? element.closest('[class*="overflow-y-auto"]')
-    if (scrollContainer) {
-      const containerRect = scrollContainer.getBoundingClientRect()
-      const elementRect = element.getBoundingClientRect()
-      const scrollTop = scrollContainer.scrollTop + (elementRect.top - containerRect.top)
-      scrollContainer.scrollTo({ top: scrollTop, behavior: 'smooth' })
-      return
-    }
-
-    element.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }, [])
+    onSectionChange(id)
+  }, [onSectionChange])
 
   useEffect(() => {
     if (variant === 'horizontal' && activeButtonRef.current) {
@@ -65,59 +54,6 @@ export function SettingsSidebarNav({
       })
     }
   }, [activeSection, variant])
-
-  useEffect(() => {
-    const observers: IntersectionObserver[] = []
-    const visibleSections = new Map<string, number>()
-
-    sections.forEach((section) => {
-      const element = document.getElementById(`section-${section.id}`)
-      if (!element) {
-        return
-      }
-
-      const observer = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-              visibleSections.set(section.id, entry.boundingClientRect.top)
-            } else {
-              visibleSections.delete(section.id)
-            }
-
-            if (visibleSections.size === 0) {
-              return
-            }
-
-            let topmostId = ''
-            let minTop = Infinity
-
-            visibleSections.forEach((top, id) => {
-              if (top < minTop) {
-                minTop = top
-                topmostId = id
-              }
-            })
-
-            if (topmostId) {
-              setActiveSection(topmostId)
-            }
-          })
-        },
-        {
-          rootMargin: '-80px 0px -60% 0px',
-          threshold: 0,
-        }
-      )
-
-      observer.observe(element)
-      observers.push(observer)
-    })
-
-    return () => {
-      observers.forEach((observer) => observer.disconnect())
-    }
-  }, [])
 
   if (variant === 'horizontal') {
     return (

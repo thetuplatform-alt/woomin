@@ -46,12 +46,24 @@ export async function getCloudflareStreamConfig(options?: {
   })
 
   const map = new Map(settings.map((setting) => [setting.key, setting.value]))
+  const valueOrEnv = (key: string, envKey: string) =>
+    map.get(key)?.trim() || process.env[envKey]?.trim() || ''
+
   cachedConfig = {
-    accountId: map.get(SETTING_KEYS.CLOUDFLARE_ACCOUNT_ID) || '',
-    apiToken: map.get(SETTING_KEYS.CLOUDFLARE_API_TOKEN) || '',
-    customerCode: map.get(SETTING_KEYS.CLOUDFLARE_STREAM_CUSTOMER_CODE) || '',
-    signingSecret: map.get(SETTING_KEYS.CLOUDFLARE_STREAM_SIGNING_SECRET) || '',
-    webhookSecret: map.get(SETTING_KEYS.CLOUDFLARE_STREAM_WEBHOOK_SECRET) || '',
+    accountId: valueOrEnv(SETTING_KEYS.CLOUDFLARE_ACCOUNT_ID, 'CLOUDFLARE_ACCOUNT_ID'),
+    apiToken: valueOrEnv(SETTING_KEYS.CLOUDFLARE_API_TOKEN, 'CLOUDFLARE_API_TOKEN'),
+    customerCode: valueOrEnv(
+      SETTING_KEYS.CLOUDFLARE_STREAM_CUSTOMER_CODE,
+      'CLOUDFLARE_STREAM_CUSTOMER_CODE'
+    ),
+    signingSecret: valueOrEnv(
+      SETTING_KEYS.CLOUDFLARE_STREAM_SIGNING_SECRET,
+      'CLOUDFLARE_STREAM_SIGNING_SECRET'
+    ),
+    webhookSecret: valueOrEnv(
+      SETTING_KEYS.CLOUDFLARE_STREAM_WEBHOOK_SECRET,
+      'CLOUDFLARE_STREAM_WEBHOOK_SECRET'
+    ),
   }
   cachedAt = Date.now()
 
@@ -62,7 +74,6 @@ export async function getCloudflareStreamConfigStatus() {
   const config = await getCloudflareStreamConfig()
 
   return {
-    ...config,
     hasUploadConfig: Boolean(config.accountId && config.apiToken),
     hasPlaybackConfig: Boolean(config.customerCode),
     hasSigningConfig: Boolean(config.signingSecret),

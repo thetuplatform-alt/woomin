@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button'
 import { getMediaStats, getMediaList } from '@/lib/actions/media'
 import { getActiveCloudVideoProvider } from '@/lib/actions/settings'
-import { getCloudflareStreamConfigStatus } from '@/lib/cloudflare-stream-config'
+import { getCloudflareStreamConfig } from '@/lib/cloudflare-stream-config'
 import { normalizeVideoStatus } from '@/lib/video-source'
 import { Film, Image as ImageIcon, FileText, HardDrive, ArrowRight, Loader2 } from 'lucide-react'
 
@@ -139,7 +139,7 @@ function getVideoThumbnailUrl(
 // 最近上傳的影片
 async function RecentVideos() {
   const activeProvider = (await getActiveCloudVideoProvider()) ?? 'cloudflare'
-  const cloudflareStream = await getCloudflareStreamConfigStatus()
+  const cloudflareStream = await getCloudflareStreamConfig()
   const result = await getMediaList({ type: 'VIDEO', pageSize: 4, provider: activeProvider })
 
   if (result.media.length === 0) {

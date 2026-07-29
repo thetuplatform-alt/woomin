@@ -1,10 +1,10 @@
 {
   "name": "ray-realms-course",
-  "version": "1.0.0",
+  "version": "1.8.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/prisma-migrate-deploy.cjs && npx prisma generate && npx tsx scripts/post-migrate-seamless-upgrade.ts && npx tsx scripts/sync-cloudflare-stream-env-to-db.ts && npx tsx scripts/sync-email-env-to-db.ts && next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
     "admin:init": "npx tsx scripts/init-admin.ts",
@@ -62,7 +62,7 @@
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@types/sanitize-html": "^2.16.1",
-    "@vimeo/player": "^2.30.4",
+    "@vidstack/react": "^1.15.6",
     "ai": "^6.0.28",
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",

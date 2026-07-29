@@ -3,7 +3,10 @@
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
-import { clearCloudflareStreamConfigCache } from '@/lib/cloudflare-stream-config'
+import {
+  clearCloudflareStreamConfigCache,
+  getCloudflareStreamConfig,
+} from '@/lib/cloudflare-stream-config'
 import { SETTING_KEYS } from '@/lib/validations/settings'
 import { setupFormSchema, type SetupFormData } from '@/lib/setup-config'
 import { z } from 'zod'
@@ -57,28 +60,29 @@ export async function completeSetup(
     }
 
     const defaultLocalStorageRoot = '/data/uploads'
+    const existingCloudflareConfig = await getCloudflareStreamConfig({ forceRefresh: true })
 
     const settingsToSave: Array<{ key: string; value: string }> = [
       { key: SETTING_KEYS.VIDEO_PROVIDER, value: validatedData.videoProvider },
       {
         key: SETTING_KEYS.CLOUDFLARE_ACCOUNT_ID,
-        value: validatedData.cloudflareAccountId || '',
+        value: validatedData.cloudflareAccountId || existingCloudflareConfig.accountId,
       },
       {
         key: SETTING_KEYS.CLOUDFLARE_API_TOKEN,
-        value: validatedData.cloudflareApiToken || '',
+        value: validatedData.cloudflareApiToken || existingCloudflareConfig.apiToken,
       },
       {
         key: SETTING_KEYS.CLOUDFLARE_STREAM_CUSTOMER_CODE,
-        value: validatedData.cloudflareStreamCustomerCode || '',
+        value: validatedData.cloudflareStreamCustomerCode || existingCloudflareConfig.customerCode,
       },
       {
         key: SETTING_KEYS.CLOUDFLARE_STREAM_SIGNING_SECRET,
-        value: validatedData.cloudflareStreamSigningSecret || '',
+        value: validatedData.cloudflareStreamSigningSecret || existingCloudflareConfig.signingSecret,
       },
       {
         key: SETTING_KEYS.CLOUDFLARE_STREAM_WEBHOOK_SECRET,
-        value: validatedData.cloudflareStreamWebhookSecret || '',
+        value: validatedData.cloudflareStreamWebhookSecret || existingCloudflareConfig.webhookSecret,
       },
       { key: SETTING_KEYS.STORAGE_DRIVER, value: validatedData.storageDriver },
       {

@@ -27,6 +27,9 @@ export interface LessonContent {
   videoThumbnail: string | null
   videoId: string | null
   videoDuration: number | null
+  subtitleUrl: string | null
+  subtitleLang: string | null
+  subtitleLabel: string | null
   isFree: boolean
   order: number
   // 製作中設定
@@ -140,6 +143,9 @@ export async function getLessonContent(
     videoThumbnail: hasAccess ? effectiveVideo.videoThumbnail : null,
     videoId: hasAccess ? effectiveVideo.legacyVideoId : null,
     videoDuration: effectiveVideo.videoDuration,
+    subtitleUrl: hasAccess ? lesson.subtitleUrl : null,
+    subtitleLang: hasAccess ? lesson.subtitleLang : null,
+    subtitleLabel: hasAccess ? lesson.subtitleLabel : null,
     isFree: lesson.isFree,
     order: lesson.order,
     // 製作中設定
