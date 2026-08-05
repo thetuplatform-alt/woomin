@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -324,6 +325,9 @@ export function VideosClient({
                 )}
               </DialogTitle>
             </DialogHeader>
+            <DialogDescription className="text-body">
+              選擇影片並上傳到目前啟用的影片服務。
+            </DialogDescription>
             <p className="text-sm text-body">
               支援多支影片拖曳或批次上傳。上傳完成後，這些影片會出現在媒體中心，供課程單元重複使用。
             </p>

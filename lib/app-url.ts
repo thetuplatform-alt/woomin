@@ -60,7 +60,7 @@ function normalizeAppUrl(raw: string): string | null {
   }
 }
 
-function resolveOriginFromHeaders(headerSource: Headers): string | null {
+export function resolveOriginFromHeaders(headerSource: Headers): string | null {
   const forwardedProto = headerSource.get('x-forwarded-proto')
   const forwardedHost = headerSource.get('x-forwarded-host')
 

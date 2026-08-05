@@ -6,10 +6,133 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, Download, ExternalLink, Maximize2, X } from "lucide-react";
+import { ChevronRight, Download, ExternalLink, Loader2, Maximize2, Puzzle, X } from "lucide-react";
 import type { AdjacentLessons } from "@/lib/actions/lesson";
 import { Streamdown } from "streamdown";
 import React from "react";
+
+export function ToolEmbed({
+  embedSrc,
+  newTabHref,
+  title,
+}: {
+  embedSrc: string;
+  newTabHref: string | null;
+  title: string;
+}) {
+  const [isExpanded, setIsExpanded] = React.useState(false);
+  const [isLoading, setIsLoading] = React.useState(true);
+
+  // 換了工具網址（換課或講師改了設定）才重新顯示載入中；iframe 本身不會因為
+  // 展開/收合而重新掛載，避免誤判成「又要重新載入」。
+  React.useEffect(() => {
+    setIsLoading(true);
+  }, [embedSrc]);
+
+  React.useEffect(() => {
+    if (!isExpanded) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsExpanded(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isExpanded]);
+
+  if (!embedSrc) return null;
+
+  // 全螢幕/一般模式共用同一個 <iframe>（只切換外層 class），避免切換時重新掛載
+  // 造成第三方工具重新載入、使用者已輸入的內容或操作狀態被重置。
+  return (
+    <section
+      className={
+        isExpanded
+          ? "fixed inset-0 z-[9999] flex flex-col bg-white"
+          : "my-10 not-prose overflow-hidden rounded-lg border border-divider bg-white shadow-sm"
+      }
+    >
+      <div
+        className={
+          isExpanded
+            ? "flex h-14 shrink-0 items-center justify-between gap-3 border-b border-divider px-4"
+            : "flex flex-wrap items-center justify-between gap-3 border-b border-divider px-4 py-3"
+        }
+      >
+        <div className="flex min-w-0 items-center gap-2">
+          <Puzzle className="h-4 w-4 shrink-0 text-cta" />
+          <p className="truncate text-sm font-semibold text-heading">{title}</p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {!isExpanded && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 rounded-full border-divider text-xs"
+              onClick={() => setIsExpanded(true)}
+            >
+              <Maximize2 className="mr-1.5 h-3.5 w-3.5" />
+              全螢幕
+            </Button>
+          )}
+          {newTabHref && (
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="h-8 rounded-full border-divider text-xs"
+            >
+              <a href={newTabHref} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                新分頁
+              </a>
+            </Button>
+          )}
+          {isExpanded && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 rounded-full border-divider text-xs"
+              onClick={() => setIsExpanded(false)}
+            >
+              <X className="mr-1.5 h-3.5 w-3.5" />
+              關閉
+            </Button>
+          )}
+        </div>
+      </div>
+      <div
+        className={
+          isExpanded
+            ? "relative min-h-0 flex-1 bg-surface"
+            : "relative h-[70vh] min-h-[520px] bg-surface"
+        }
+      >
+        {isLoading && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center gap-2 bg-surface text-sm text-caption">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            工具載入中...
+          </div>
+        )}
+        <iframe
+          src={embedSrc}
+          title={title}
+          className="h-full w-full border-0"
+          sandbox="allow-scripts allow-forms allow-popups allow-downloads"
+          onLoad={() => setIsLoading(false)}
+        />
+      </div>
+    </section>
+  );
+}
 
 /**
  * 遞迴取得 React Node 中的純文字內容
@@ -36,6 +159,9 @@ const slugify = (text: string) => {
 interface LessonContentProps {
   lessonId: string;
   content: string | null;
+  toolEmbedSrc?: string | null;
+  toolWrapperHref?: string | null;
+  toolTitle?: string | null;
   adjacentLessons: AdjacentLessons;
   courseSlug: string;
   onTimestampClick?: (seconds: number) => void;
@@ -341,16 +467,30 @@ function PdfEmbed({
 export function LessonContent({
   lessonId,
   content,
+  toolEmbedSrc,
+  toolWrapperHref,
+  toolTitle,
   adjacentLessons,
   courseSlug,
   onTimestampClick,
   onComplete,
 }: LessonContentProps) {
-  // 沒有內容時顯示提示
+  const toolEmbed = toolEmbedSrc ? (
+    <ToolEmbed
+      embedSrc={toolEmbedSrc}
+      newTabHref={toolWrapperHref ?? null}
+      title={toolTitle || "內嵌工具"}
+    />
+  ) : null;
+
+  // 沒有內容時顯示提示（工具若有設定仍會顯示）
   if (!content) {
     return (
-      <div className="flex min-h-[200px] items-center justify-center">
-        <p className="text-[#EBEBF5]/60">此單元尚無文字內容</p>
+      <div className="mx-auto max-w-5xl px-4 py-12 lg:px-8">
+        {toolEmbed}
+        <div className="flex min-h-[200px] items-center justify-center">
+          <p className="text-[#EBEBF5]/60">此單元尚無文字內容</p>
+        </div>
       </div>
     );
   }
@@ -359,6 +499,7 @@ export function LessonContent({
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-12 lg:px-8">
+      {toolEmbed}
       <article className="prose prose-neutral max-w-none prose-headings:text-heading prose-h1:text-4xl prose-h1:font-bold prose-h2:text-2xl prose-h2:font-bold prose-h2:border-b prose-h2:border-divider prose-h2:pb-4 prose-h3:text-xl prose-h3:font-semibold prose-p:text-body prose-p:leading-relaxed prose-a:text-cta prose-a:no-underline hover:prose-a:underline prose-strong:text-heading prose-code:text-cta prose-code:bg-surface-hover prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none prose-pre:bg-surface prose-pre:border prose-pre:border-divider prose-blockquote:border-l-cta prose-blockquote:text-body/80 prose-li:text-body prose-li:marker:text-caption prose-hr:border-divider prose-img:rounded-2xl prose-table:text-body prose-th:text-heading prose-th:border-divider prose-td:border-divider">
         {segments.map((segment, index) => {
           if (segment.type === "pdf") {

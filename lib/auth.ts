@@ -121,7 +121,7 @@ const providers = [
   }),
 ]
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
+export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
   ...authConfig,
   secret: getAuthSecret(),
   adapter: PrismaAdapter(prisma) as Adapter,

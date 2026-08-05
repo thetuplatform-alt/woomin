@@ -54,10 +54,14 @@ pnpm dev
 
 ## Zeabur 部署建議
 
+完整客戶交付與運維入口在 [`docs/deployment/AGENT.md`](docs/deployment/AGENT.md)，首次初始化請先閱讀 [`docs/customer-deployment.md`](docs/customer-deployment.md)。客戶使用自己的 Zeabur workspace、獨立 GitHub repository 與 PostgreSQL；GitHub Actions 只更新既有 app service，不會自動租用或刪除付費資源。
+
 - App Service 掛上 PostgreSQL，提供 `DATABASE_URL`
 - 額外掛一個 persistent volume 到 `/data`（應用程式會在其下使用 `/data/uploads`）
 - `APP_URL` 與 `NEXT_PUBLIC_APP_URL` 都要填正式 HTTPS 網址，並在 Zeabur 標記為 **build-time 變數**；這兩項會在 Docker build 時寫入 Server Actions 的 origin 白名單
 - 不需要先準備 S3、Cloudflare Stream、SMTP 或 OAuth 憑證
+
+部署前執行 `./deploy/customer/bootstrap.sh` 與 `./deploy/zeabur/preflight.sh`；部署後依 `docs/deployment/verification.md` 驗證 migration、`8080`、`/api/version` SHA、`/data` 與 cron。需要 billing、browser authorization、第三方憑證或 account choice 時，停下來由客戶確認。
 
 若之後要啟用進階功能，可在以下位置補設定：
 

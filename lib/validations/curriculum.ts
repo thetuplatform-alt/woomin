@@ -83,6 +83,17 @@ export const lessonSchema = z.object({
   subtitleLang: z.string().max(20).optional().nullable(),
   subtitleLabel: z.string().max(100).optional().nullable(),
 
+  // 課程內嵌工具：網址必須是有效的 https 網址，實際存取時只放行這一個來源
+  toolUrl: z
+    .string()
+    .url({ message: '工具網址必須是有效的網址' })
+    .max(2000)
+    .refine((url) => url.startsWith('https://'), { message: '工具網址必須是 https' })
+    .optional()
+    .nullable()
+    .or(z.literal('')),
+  toolTitle: z.string().max(100).optional().nullable(),
+
   // 是否免費試閱：選填，預設 false
   isFree: z.boolean().default(false),
 

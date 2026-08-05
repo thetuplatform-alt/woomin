@@ -379,6 +379,8 @@ export async function createLesson(
         subtitleUrl: validatedData.subtitleUrl ?? null,
         subtitleLang: validatedData.subtitleLang ?? null,
         subtitleLabel: validatedData.subtitleLabel ?? null,
+        toolUrl: validatedData.toolUrl || null,
+        toolTitle: validatedData.toolTitle ?? null,
         isFree: validatedData.isFree ?? false,
         order: newOrder,
         // 製作中設定
@@ -460,6 +462,8 @@ export async function updateLesson(
         subtitleUrl: validatedData.subtitleUrl ?? null,
         subtitleLang: validatedData.subtitleLang ?? null,
         subtitleLabel: validatedData.subtitleLabel ?? null,
+        toolUrl: validatedData.toolUrl || null,
+        toolTitle: validatedData.toolTitle ?? null,
         isFree: validatedData.isFree ?? false,
         // 製作中設定
         status: validatedData.status ?? 'PUBLISHED',

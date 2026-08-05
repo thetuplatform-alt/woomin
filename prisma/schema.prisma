@@ -494,6 +494,10 @@ model Lesson {
   subtitleLang   String?
   subtitleLabel  String?
 
+  // 課程內嵌工具（例如 AI 小工具）：僅允許代理這一個網址，防止開放代理
+  toolUrl   String?
+  toolTitle String?
+
   isFree    Boolean  @default(false) // 是否免費試閱
   order     Int      @default(0)
   createdAt DateTime @default(now())

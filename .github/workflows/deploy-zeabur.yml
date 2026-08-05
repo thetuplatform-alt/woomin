@@ -1,0 +1,47 @@
+name: Deploy to customer Zeabur
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DEPLOY_BRANCH: ${{ vars.DEPLOY_BRANCH || 'main' }}
+  ZEABUR_PROJECT_ID: ${{ vars.ZEABUR_PROJECT_ID }}
+  ZEABUR_SERVICE_ID: ${{ vars.ZEABUR_SERVICE_ID }}
+  ZEABUR_ENV_ID: ${{ vars.ZEABUR_ENV_ID }}
+  ZEABUR_DOMAIN: ${{ vars.ZEABUR_DOMAIN }}
+  GIT_COMMIT_SHA: ${{ github.sha }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate customer target
+        env:
+          ZEABUR_TOKEN: ${{ secrets.ZEABUR_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "$ZEABUR_TOKEN" || { echo 'stage=config missing ZEABUR_TOKEN' >&2; exit 1; }
+          test -n "$ZEABUR_PROJECT_ID" || { echo 'stage=config missing ZEABUR_PROJECT_ID' >&2; exit 1; }
+          test -n "$ZEABUR_SERVICE_ID" || { echo 'stage=config missing ZEABUR_SERVICE_ID' >&2; exit 1; }
+          test -n "$ZEABUR_ENV_ID" || { echo 'stage=config missing ZEABUR_ENV_ID' >&2; exit 1; }
+          test -n "$ZEABUR_DOMAIN" || { echo 'stage=config missing ZEABUR_DOMAIN' >&2; exit 1; }
+          echo "stage=config target_service=$ZEABUR_SERVICE_ID expected_sha=$GIT_COMMIT_SHA"
+      - name: Install pinned Zeabur CLI
+        run: npm install --global zeabur@0.21.0
+      - name: Deploy existing customer service
+        env:
+          ZEABUR_TOKEN: ${{ secrets.ZEABUR_TOKEN }}
+        run: |
+          set -euo pipefail
+          echo "stage=deploy target_project=$ZEABUR_PROJECT_ID target_service=$ZEABUR_SERVICE_ID expected_sha=$GIT_COMMIT_SHA"
+          zeabur auth login --token "$ZEABUR_TOKEN" -i=false
+          zeabur variable update --id "$ZEABUR_SERVICE_ID" --env-id "$ZEABUR_ENV_ID" --key "GIT_COMMIT_SHA=$GIT_COMMIT_SHA" --yes -i=false
+          zeabur service redeploy --id "$ZEABUR_SERVICE_ID" --env-id "$ZEABUR_ENV_ID" --yes -i=false
+      - name: Verify health and commit
+        run: ./deploy/customer/verify-deployment.sh --domain "$ZEABUR_DOMAIN" --expected-sha "$GIT_COMMIT_SHA"

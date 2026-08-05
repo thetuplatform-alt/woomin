@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
-import { auth } from '@/lib/auth'
+import { auth, unstable_update } from '@/lib/auth'
 import {
   clearCloudflareStreamConfigCache,
   getCloudflareStreamConfig,
@@ -175,6 +175,16 @@ export async function completeSetup(
         },
       },
     })
+
+    // 初始化會在同一個 server action 內把首位使用者升成管理員。
+    // 直接在伺服器端更新 JWT，避免完成頁再用 useSession().update()
+    // 觸發另一個 session API 請求，造成 JWTSessionError 並清掉登入 cookie。
+    try {
+      await unstable_update({ user: { role: 'ADMIN' } })
+    } catch (error) {
+      // 初始化資料已完成；即使 session 更新失敗，後台仍會以資料庫角色判斷權限。
+      console.error('更新初始化後登入狀態失敗:', error)
+    }
 
     revalidatePath('/admin')
     revalidatePath('/admin/settings')

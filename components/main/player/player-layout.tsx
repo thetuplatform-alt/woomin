@@ -83,6 +83,9 @@ export function PlayerLayout({
     CourseProgressStats | undefined
   >(initialCourseProgress);
 
+  // 此單元是否有可播放的影片（判斷邏輯需與 video-player.tsx 的「無影片」文案條件一致）
+  const hasVideo = Boolean(lesson.videoProvider && (lesson.videoSourceId ?? lesson.videoId));
+
   // 迷你播放器狀態
   const [showMiniPlayer, setShowMiniPlayer] = useState(false);
   const [miniPlayerDismissed, setMiniPlayerDismissed] = useState(false);
@@ -226,6 +229,7 @@ export function PlayerLayout({
       const videoContainer = videoContainerRef.current;
       const shouldDisableMini =
         !videoContainer ||
+        !hasVideo ||
         isComingSoon ||
         miniPlayerDismissed ||
         window.innerWidth < 768;
@@ -265,7 +269,7 @@ export function PlayerLayout({
       window.removeEventListener("scroll", scheduleUpdate);
       window.removeEventListener("resize", scheduleUpdate);
     };
-  }, [isComingSoon, miniPlayerDismissed]);
+  }, [isComingSoon, miniPlayerDismissed, hasVideo]);
 
   useEffect(() => {
     setShowMiniPlayer(false);
@@ -461,6 +465,9 @@ export function PlayerLayout({
           <LessonContent
             lessonId={lesson.id}
             content={lesson.content}
+            toolEmbedSrc={lesson.toolEmbedSrc}
+            toolWrapperHref={lesson.toolWrapperHref}
+            toolTitle={lesson.toolTitle}
             adjacentLessons={adjacentLessons}
             courseSlug={courseSlug}
             onTimestampClick={handleTimestampClick}

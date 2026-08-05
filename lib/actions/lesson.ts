@@ -8,6 +8,8 @@ import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
 import { getEffectiveLessonVideo } from '@/lib/video-source'
 import { isPurchaseActive } from '@/lib/purchase/is-active'
+import { encodeToolOrigin, buildToolEmbedSrc } from '@/lib/tool-embed'
+import { signToolAccessToken } from '@/lib/tool-embed-token'
 
 /**
  * 單元狀態類型
@@ -30,6 +32,13 @@ export interface LessonContent {
   subtitleUrl: string | null
   subtitleLang: string | null
   subtitleLabel: string | null
+  // 注意：不可以放原始 toolUrl——這個型別會整包當 prop 傳給 client component
+  // （PlayerLayout），序列化進 RSC/hydration payload 後，原始網址會直接以明文出現在
+  // 頁面資料裡，不需要解 base64url 就能取得，讓 wrapper page／sandbox 的保護失去意義。
+  // 只傳伺服器端算好、本身就有存取權驗證的代理網址。
+  toolEmbedSrc: string | null
+  toolWrapperHref: string | null
+  toolTitle: string | null
   isFree: boolean
   order: number
   // 製作中設定
@@ -133,6 +142,22 @@ export async function getLessonContent(
 
   const effectiveVideo = getEffectiveLessonVideo(lesson)
 
+  // 只在伺服器端算好代理網址／wrapper 網址，不要把原始 toolUrl 傳給 client component。
+  // 代理網址裡的 accessToken 是現場簽發、綁定這次已確認過的存取權限（見
+  // lib/tool-embed-token.ts）——不能用 cookie 頂替，sandboxed iframe 是 opaque
+  // origin，會被 Chrome 的第三方 cookie 封鎖擋掉，只有烤進網址本身才不受影響。
+  let toolEmbedSrc: string | null = null
+  let toolWrapperHref: string | null = null
+  if (hasAccess && lesson.toolUrl) {
+    const accessToken = signToolAccessToken(lesson.id, session?.user?.id)
+    toolEmbedSrc = buildToolEmbedSrc(lesson.id, lesson.toolUrl, accessToken)
+    try {
+      toolWrapperHref = `/lesson-tool/${lesson.id}/${encodeToolOrigin(new URL(lesson.toolUrl).origin)}`
+    } catch {
+      toolWrapperHref = null
+    }
+  }
+
   return {
     id: lesson.id,
     title: lesson.title,
@@ -146,6 +171,9 @@ export async function getLessonContent(
     subtitleUrl: hasAccess ? lesson.subtitleUrl : null,
     subtitleLang: hasAccess ? lesson.subtitleLang : null,
     subtitleLabel: hasAccess ? lesson.subtitleLabel : null,
+    toolEmbedSrc,
+    toolWrapperHref,
+    toolTitle: hasAccess ? lesson.toolTitle : null,
     isFree: lesson.isFree,
     order: lesson.order,
     // 製作中設定

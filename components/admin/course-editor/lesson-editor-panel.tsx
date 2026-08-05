@@ -72,6 +72,11 @@ interface LessonSubtitleState {
   label: string
 }
 
+interface LessonToolState {
+  url: string
+  title: string
+}
+
 function EmptyState() {
   return (
     <div className="flex h-full flex-col items-center justify-center p-8 text-center">
@@ -899,6 +904,56 @@ function SubtitleSection({
   )
 }
 
+function isValidToolUrl(url: string) {
+  if (!url) return true
+  try {
+    return new URL(url).protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
+function ToolSection({
+  value,
+  onChange,
+}: {
+  value: LessonToolState
+  onChange: (value: LessonToolState) => void
+}) {
+  const urlError = value.url && !isValidToolUrl(value.url) ? '工具網址必須是有效的 https 網址' : null
+
+  return (
+    <div className="space-y-3 rounded-xl border border-divider bg-white p-4">
+      <div>
+        <h3 className="text-sm font-medium text-heading">內嵌工具</h3>
+        <p className="mt-1 text-xs text-caption">
+          貼上工具的完整網址（限 https），學員頁面會在影片下方以 iframe 嵌入。留空則不顯示。
+        </p>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="space-y-1 text-xs text-body sm:col-span-2">
+          工具網址
+          <Input
+            value={value.url}
+            onChange={(event) => onChange({ ...value, url: event.target.value.trim() })}
+            placeholder="https://your-tool.example.com"
+            aria-invalid={Boolean(urlError)}
+          />
+        </label>
+        <label className="space-y-1 text-xs text-body">
+          顯示名稱
+          <Input
+            value={value.title}
+            onChange={(event) => onChange({ ...value, title: event.target.value })}
+            placeholder="AI 小工具"
+          />
+        </label>
+      </div>
+      {urlError ? <p className="text-xs text-red-500">{urlError}</p> : null}
+    </div>
+  )
+}
+
 interface LessonEditorPanelProps {
   streamCustomerCode?: string
   isGeminiConfigured?: boolean
@@ -929,6 +984,7 @@ export function LessonEditorPanel({
   })
   const [content, setContent] = useState('')
   const [subtitle, setSubtitle] = useState<LessonSubtitleState>({ url: null, lang: 'zh-TW', label: '繁體中文' })
+  const [tool, setTool] = useState<LessonToolState>({ url: '', title: '' })
   const prevLessonIdRef = useRef<string | null>(null)
 
   useEffect(() => {
@@ -939,6 +995,7 @@ export function LessonEditorPanel({
         setVideo(mapLessonVideo(selectedLesson))
         setContent(selectedLesson.content ?? '')
         setSubtitle({ url: selectedLesson.subtitleUrl, lang: selectedLesson.subtitleLang ?? 'zh-TW', label: selectedLesson.subtitleLabel ?? '繁體中文' })
+        setTool({ url: selectedLesson.toolUrl ?? '', title: selectedLesson.toolTitle ?? '' })
       } else {
         setVideo({
           provider: null,
@@ -950,6 +1007,7 @@ export function LessonEditorPanel({
         })
         setContent('')
         setSubtitle({ url: null, lang: 'zh-TW', label: '繁體中文' })
+        setTool({ url: '', title: '' })
       }
     }
   }, [selectedLesson, selectedLessonId])
@@ -981,6 +1039,11 @@ export function LessonEditorPanel({
       return
     }
 
+    if (tool.url && !isValidToolUrl(tool.url)) {
+      toast.error('請先輸入有效的 https 工具網址，或清空工具設定')
+      return
+    }
+
     startTransition(async () => {
       const result = await updateLesson(selectedLesson.id, {
         title: selectedLesson.title,
@@ -993,6 +1056,8 @@ export function LessonEditorPanel({
         subtitleUrl: subtitle.url,
         subtitleLang: subtitle.lang,
         subtitleLabel: subtitle.label,
+        toolUrl: tool.url,
+        toolTitle: tool.title,
         content: content || undefined,
         isFree: selectedLesson.isFree,
         status: selectedLesson.status as 'PUBLISHED' | 'COMING_SOON',
@@ -1014,6 +1079,8 @@ export function LessonEditorPanel({
           subtitleUrl: result.lesson.subtitleUrl,
           subtitleLang: result.lesson.subtitleLang,
           subtitleLabel: result.lesson.subtitleLabel,
+          toolUrl: result.lesson.toolUrl,
+          toolTitle: result.lesson.toolTitle,
         })
         setIsDirty(false)
         toast.success('單元已儲存')
@@ -1075,6 +1142,18 @@ export function LessonEditorPanel({
               subtitleUrl: next.url,
               subtitleLang: next.lang,
               subtitleLabel: next.label,
+            })
+          }}
+        />
+
+        <ToolSection
+          value={tool}
+          onChange={(next) => {
+            setTool(next)
+            setIsDirty(true)
+            updateLessonInCurriculum(selectedLesson.id, {
+              toolUrl: next.url || null,
+              toolTitle: next.title || null,
             })
           }}
         />

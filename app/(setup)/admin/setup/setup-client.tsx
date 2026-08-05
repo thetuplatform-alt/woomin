@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState, useTransition } from 'react'
-import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
 import {
   ChevronDown,
@@ -95,7 +94,6 @@ function OptionCard({
 }
 
 export function SetupClient({ user, detectedDefaults }: SetupClientProps) {
-  const { update: updateSession } = useSession()
   const [currentStep, setCurrentStep] = useState(0)
   const [isPending, startTransition] = useTransition()
   const [showAdvancedSecrets, setShowAdvancedSecrets] = useState(false)
@@ -202,7 +200,6 @@ export function SetupClient({ user, detectedDefaults }: SetupClientProps) {
       const result = await completeSetup(data)
 
       if (result.success) {
-        await updateSession({ role: 'ADMIN' })
         toast.success('系統初始化完成，歡迎開始使用平台')
         window.location.href = '/admin'
       } else {
@@ -612,6 +609,7 @@ export function SetupClient({ user, detectedDefaults }: SetupClientProps) {
                     <Label className="text-heading">SMTP 密碼</Label>
                     <Input
                       type="password"
+                      autoComplete="off"
                       value={smtpPass}
                       onChange={(event) => setSmtpPass(event.target.value)}
                     />
@@ -670,6 +668,7 @@ export function SetupClient({ user, detectedDefaults }: SetupClientProps) {
                     <Label className="text-heading">Google Client Secret</Label>
                     <Input
                       type="password"
+                      autoComplete="off"
                       value={googleClientSecret}
                       onChange={(event) => setGoogleClientSecret(event.target.value)}
                     />

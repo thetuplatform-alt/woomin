@@ -18,22 +18,16 @@ RUN if [ -z "$APP_URL" ] && [ -z "$NEXT_PUBLIC_APP_URL" ]; then \
       echo '警告：APP_URL 未設定，Server Actions 的 origin 白名單可能為空。' >&2; \
       echo '警告：NEXT_PUBLIC_APP_URL 未設定，請在 Zeabur 設為 build-time 變數。' >&2; \
     fi
-# node:22-slim 沒有內建 git;要在這個階段跑 git rev-parse 取得 commit SHA
-# (見下方 GIT_COMMIT_SHA 那段)必須明確安裝。
-RUN apt-get update -y && apt-get install -y openssl git && rm -rf /var/lib/apt/lists/*
+# The build context uploaded by Zeabur does not include .git. The deploy
+# command supplies the local HEAD through the GIT_COMMIT_SHA build variable.
+RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 RUN npm install -g pnpm
 COPY --from=deps /src/node_modules ./node_modules
 COPY . .
-# 建置期把 git commit SHA 寫入檔案,供 /api/version 端點回報正式站實際
-# 執行的版本(見 openspec/changes/fix-zeabur-deploy-target-mismatch/design.md)。
-# .git 不會進到最終 runner 映像檔,只在這個中繼 builder 階段短暫存在。
-# 之前兩次嘗試都得到 fallback 的 "unknown"(已用實際 shell 進運作中容器
-# cat 這個檔案確認過,不是憑空猜測):node:22-slim 沒裝 git(上面已補),
-# 且容器內 UID 跟 COPY 進來的檔案擁有者不同時 git 會拒絕操作(dubious
-# ownership),用 safe.directory 例外排除。`2>&1 || true`是為了這一版
-# 如果還有問題,把實際錯誤訊息存進檔案而不是吞掉,方便下一輪直接看原因。
-RUN git config --global --add safe.directory /src; \
-  git rev-parse HEAD > /src/GIT_COMMIT_SHA 2>&1 || true
+# Persist the verified source revision for /api/version; never write git
+# diagnostics or a fallback error string into the public version endpoint.
+ARG GIT_COMMIT_SHA=unknown
+RUN printf '%s\n' "$GIT_COMMIT_SHA" > /src/GIT_COMMIT_SHA
 RUN npx prisma generate
 RUN pnpm exec next build
 # Assemble a self-contained Prisma CLI for the standalone runner. pnpm nests
@@ -48,7 +42,10 @@ RUN PV="$(node -p "require('/src/node_modules/prisma/package.json').version")" \
   && npm init -y >/dev/null \
   && npm install "prisma@${PV}" dotenv pg --omit=dev --no-audit --no-fund
 # 啟動期仍需執行原本 build script 內的資料庫同步腳本；用獨立 runtime CLI 避免把完整開發依賴帶進 runner。
-RUN npm install --prefix /runtime-cli tsx dotenv --omit=dev --no-audit --no-fund
+# Runtime migration/upgrade scripts import the Prisma PostgreSQL adapter through
+# /src/lib/prisma.ts. Keep it in the isolated runtime tree alongside tsx so the
+# standalone image does not depend on pnpm's builder-only symlinks.
+RUN npm install --prefix /runtime-cli tsx dotenv zod @prisma/adapter-pg --omit=dev --no-audit --no-fund
 
 FROM node:22-slim AS runner
 LABEL "language"="nodejs"
@@ -77,6 +74,13 @@ COPY --from=builder /src/tsconfig.json ./tsconfig.json
 COPY --from=builder /src/next-env.d.ts ./next-env.d.ts
 # dotenv also at /src/node_modules so prisma.config.ts resolves it relative to CWD
 COPY --from=builder /prisma-cli/node_modules/dotenv ./node_modules/dotenv
+# Some runtime TypeScript modules resolve validation imports from the runner's
+# /src/node_modules path rather than NODE_PATH; copy this production dependency
+# explicitly from the pnpm builder tree.
+COPY --from=builder /src/node_modules/zod ./node_modules/zod
 EXPOSE 8080
 # 以 NODE_PATH 提供隔離的 prisma CLI 與 pg 給封裝腳本；其餘 SiteSetting 同步在啟動期執行，不再污染 build。
-CMD ["sh", "-c", "NODE_PATH=/src/prisma-cli/node_modules node scripts/prisma-migrate-deploy.cjs && NODE_PATH=/src/runtime-cli/node_modules:/src/prisma-cli/node_modules /src/runtime-cli/node_modules/.bin/tsx /src/runtime-scripts/post-migrate-seamless-upgrade.ts && NODE_PATH=/src/runtime-cli/node_modules:/src/prisma-cli/node_modules /src/runtime-cli/node_modules/.bin/tsx /src/runtime-scripts/sync-cloudflare-stream-env-to-db.ts && NODE_PATH=/src/runtime-cli/node_modules:/src/prisma-cli/node_modules /src/runtime-cli/node_modules/.bin/tsx /src/runtime-scripts/sync-email-env-to-db.ts && export PORT=\"${PORT:-8080}\" HOSTNAME=\"0.0.0.0\" && node server.js"]
+# Zeabur service variables are guaranteed at runtime, while Docker ARG
+# propagation depends on the build method. Prefer the runtime value so the
+# public version endpoint never falls back to `unknown`.
+CMD ["sh", "-c", "if [ -n \"${GIT_COMMIT_SHA:-}\" ]; then printf '%s\\n' \"$GIT_COMMIT_SHA\" > /src/GIT_COMMIT_SHA; fi && NODE_PATH=/src/prisma-cli/node_modules node scripts/prisma-migrate-deploy.cjs && NODE_PATH=/src/runtime-cli/node_modules:/src/prisma-cli/node_modules /src/runtime-cli/node_modules/.bin/tsx /src/runtime-scripts/post-migrate-seamless-upgrade.ts && NODE_PATH=/src/runtime-cli/node_modules:/src/prisma-cli/node_modules /src/runtime-cli/node_modules/.bin/tsx /src/runtime-scripts/sync-cloudflare-stream-env-to-db.ts && NODE_PATH=/src/runtime-cli/node_modules:/src/prisma-cli/node_modules /src/runtime-cli/node_modules/.bin/tsx /src/runtime-scripts/sync-email-env-to-db.ts && export PORT=\"${PORT:-8080}\" HOSTNAME=\"0.0.0.0\" && node server.js"]

@@ -12,6 +12,8 @@ import { zhTW } from 'date-fns/locale'
 import { Streamdown } from 'streamdown'
 import type { Media } from '@prisma/client'
 import { UnifiedVideoPlayer } from '@/components/main/player/unified-video-player'
+import { ToolEmbed } from '@/components/main/player/lesson-content'
+import { encodeToolOrigin, buildToolEmbedSrc } from '@/lib/tool-embed'
 import { useCourseEditor } from '@/lib/contexts/course-editor-context'
 import { updateLesson } from '@/lib/actions/curriculum'
 import { MediaPicker } from '@/components/admin/media/media-picker'
@@ -90,21 +92,78 @@ function EmptyState() {
 // ==================== Preview Panel ====================
 
 interface PreviewPanelProps {
+  lessonId: string
   videoProvider: 'youtube' | 'cloudflare' | 'vimeo' | 'bunny' | null
   videoSourceId: string | null
   videoId: string | null
   content: string | null
+  toolUrl: string | null
+  toolTitle: string | null
   title: string
 }
 
 function PreviewPanel({
+  lessonId,
   videoProvider,
   videoSourceId,
   videoId,
   content,
+  toolUrl,
+  toolTitle,
   title,
 }: PreviewPanelProps) {
   const effectiveVideoId = videoSourceId ?? videoId
+  // 講師本來就能在下面「內嵌工具」卡片看到 toolUrl，這裡在後台預覽面板算 embedSrc/newTabHref
+  // 沒有額外曝光問題；學員頁面那邊已經改成只傳伺服器算好的代理網址，不傳原始 toolUrl。
+  //
+  // embedSrc 需要簽章過的 accessToken（見 lib/tool-embed-token.ts），但簽章要用到
+  // server-only 的密鑰，這個面板是 client component 沒辦法自己簽，只能跟後台的小端點要一個。
+  // token 綁定一個特定 origin（見 lib/tool-embed-token.ts 的 previewOrigin），跟著
+  // 記下「這個 token 是為哪個 origin 要的」，用的時候要求兩者一致——origin 一換，
+  // 新 token 送出請求到抵達這段期間，畫面上不能拿「舊 origin 核發的 token」去湊
+  // 「新 origin」的網址：那組合一定會被代理路由判定 unsupported_origin，讓畫面
+  // 閃一下後台比對不上的錯誤 JSON，等新 token 抵達才修正。用這個 tokenForOrigin
+  // 明確比對，在新 token 抵達前 toolAccessToken 直接是 null（卡片就不渲染），
+  // 不會短暫渲染出一個注定核對失敗的 iframe。
+  const [tokenForOrigin, setTokenForOrigin] = useState<{ origin: string; token: string } | null>(null)
+  const toolOrigin = (() => {
+    if (!toolUrl) return null
+    try {
+      return new URL(toolUrl).origin
+    } catch {
+      return null
+    }
+  })()
+  const toolAccessToken = tokenForOrigin?.origin === toolOrigin ? tokenForOrigin.token : null
+
+  useEffect(() => {
+    if (!toolOrigin) return
+    let cancelled = false
+    fetch(`/api/admin/lessons/${lessonId}/tool-embed-token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: toolOrigin }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled && data?.success) setTokenForOrigin({ origin: toolOrigin, token: data.token })
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [lessonId, toolOrigin])
+
+  const toolEmbedSrc =
+    toolUrl && toolAccessToken ? buildToolEmbedSrc(lessonId, toolUrl, toolAccessToken) : null
+  const toolNewTabHref = (() => {
+    if (!toolUrl) return null
+    try {
+      return `/lesson-tool/${lessonId}/${encodeToolOrigin(new URL(toolUrl).origin)}`
+    } catch {
+      return null
+    }
+  })()
 
   return (
     <div className="h-full overflow-y-auto">
@@ -125,6 +184,17 @@ function PreviewPanel({
           </div>
         )}
       </div>
+
+      {/* 工具預覽 */}
+      {toolEmbedSrc && (
+        <div className="px-4 pt-4">
+          <ToolEmbed
+            embedSrc={toolEmbedSrc}
+            newTabHref={toolNewTabHref}
+            title={toolTitle || '內嵌工具'}
+          />
+        </div>
+      )}
 
       {/* 內容預覽 */}
       <div className="p-4">
@@ -510,6 +580,7 @@ export function SettingsPreviewPanel({
 
         <TabsContent value="preview" forceMount className="flex-1 m-0 overflow-hidden">
           <PreviewPanel
+            lessonId={selectedLesson.id}
             videoProvider={
               selectedLesson.videoProvider?.toLowerCase() === 'youtube'
                 ? 'youtube'
@@ -524,6 +595,8 @@ export function SettingsPreviewPanel({
             videoSourceId={selectedLesson.videoSourceId ?? null}
             videoId={selectedLesson.videoId}
             content={selectedLesson.content}
+            toolUrl={selectedLesson.toolUrl}
+            toolTitle={selectedLesson.toolTitle}
             title={selectedLesson.title}
           />
         </TabsContent>
