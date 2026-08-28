@@ -48,7 +48,7 @@
 
 .navbar {
   display: flex;
-  height: 74px;
+  height: 64px;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
@@ -135,7 +135,7 @@
   position: relative;
   z-index: 1;
   display: grid;
-  min-height: 650px;
+  min-height: 630px;
   grid-template-columns: 0.87fr 1.13fr;
   align-items: center;
   gap: 42px;
@@ -144,7 +144,7 @@
 .heroCopy {
   position: relative;
   z-index: 4;
-  padding: 70px 0 78px;
+  padding: 64px 0 70px;
 }
 
 .eyebrow {
@@ -161,7 +161,7 @@
   font-size: clamp(50px, 4.65vw, 70px);
   font-weight: 600;
   letter-spacing: -0.045em;
-  line-height: 1.16;
+  line-height: 1.12;
 }
 
 .heroCopy > p {
@@ -169,7 +169,7 @@
   margin: 0 0 29px;
   color: var(--muted);
   font-size: 16px;
-  line-height: 1.95;
+  line-height: 1.86;
 }
 
 .primaryButton {
@@ -567,14 +567,21 @@
 
 .digital {
   background: linear-gradient(180deg, #f7f3ea 0%, #fbfaf7 100%);
+  box-shadow: 0 14px 34px rgba(72, 61, 46, 0.035);
 }
 
 .service {
+  position: relative;
+  z-index: 1;
+  transform: translateY(-8px);
+  border-color: rgba(104, 111, 79, 0.2);
   background: linear-gradient(180deg, #e8e8df 0%, #f6f4ed 100%);
+  box-shadow: 0 26px 58px rgba(72, 68, 52, 0.11);
 }
 
 .curated {
   background: linear-gradient(180deg, #f3eee5 0%, #faf8f4 100%);
+  box-shadow: 0 14px 34px rgba(72, 61, 46, 0.035);
 }
 
 .serviceTopline {
@@ -798,8 +805,8 @@
 }
 
 .stepCard {
-  min-height: 285px;
-  padding: 28px;
+  min-height: 248px;
+  padding: 24px;
   border: 1px solid rgba(99, 87, 69, 0.11);
   border-radius: 23px;
   background: rgba(255, 255, 255, 0.64);
@@ -807,7 +814,7 @@
 }
 
 .stepNumber {
-  margin-bottom: 15px;
+  margin-bottom: 12px;
   color: #987746;
   font-size: 11px;
   font-weight: 800;
@@ -819,7 +826,7 @@
   width: 48px;
   height: 48px;
   place-items: center;
-  margin-bottom: 18px;
+  margin-bottom: 14px;
   border-radius: 15px;
   background: #e9e4d8;
   color: var(--olive-dark);
@@ -832,7 +839,7 @@
 }
 
 .stepCard > p {
-  min-height: 70px;
+  min-height: 60px;
   margin: 0;
   color: var(--muted);
   font-size: 14px;
@@ -840,7 +847,7 @@
 }
 
 .stepTags {
-  margin-top: 16px;
+  margin-top: 12px;
 }
 
 .journeyLine {
@@ -869,7 +876,7 @@
 }
 
 .accessSection {
-  padding: 70px 0;
+  padding: 60px 0;
   background: var(--paper-light);
 }
 
@@ -878,7 +885,7 @@
   grid-template-columns: 1.02fr 0.98fr;
   align-items: center;
   gap: 70px;
-  padding: 50px 56px;
+  padding: 43px 56px;
   border: 1px solid var(--line);
   border-radius: 30px;
   background:
@@ -945,7 +952,12 @@
 }
 
 .supportSection {
+  padding: 78px 0;
   background: var(--paper-light);
+}
+
+.supportSection .sectionHeading {
+  margin-bottom: 36px;
 }
 
 .supportGrid {
@@ -968,7 +980,7 @@
 
 .faqList summary {
   display: flex;
-  min-height: 65px;
+  min-height: 58px;
   align-items: center;
   justify-content: space-between;
   gap: 18px;
@@ -989,7 +1001,7 @@
 }
 
 .faqList details p {
-  margin: -3px 32px 19px 0;
+  margin: -2px 32px 15px 0;
   color: var(--muted);
   font-size: 13px;
   line-height: 1.75;
@@ -999,7 +1011,7 @@
   display: flex;
   align-items: flex-start;
   flex-direction: column;
-  padding: 32px;
+  padding: 28px;
   border: 1px solid var(--line);
   border-radius: 23px;
   background:
@@ -1009,10 +1021,10 @@
 
 .memberIcon {
   display: grid;
-  width: 50px;
-  height: 50px;
+  width: 46px;
+  height: 46px;
   place-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 18px;
   border-radius: 15px;
   background: rgba(255, 255, 255, 0.7);
   color: var(--olive-dark);
@@ -1027,7 +1039,7 @@
 }
 
 .memberCard p {
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   font-size: 14px;
 }
 
@@ -1080,7 +1092,7 @@
 
 @media (max-width: 1040px) {
   .heroGrid {
-    min-height: 610px;
+    min-height: 590px;
     grid-template-columns: 0.78fr 1.22fr;
     gap: 25px;
   }
@@ -1179,18 +1191,22 @@
 
   .heroCopy {
     max-width: 660px;
-    padding: 68px 0 18px;
+    padding: 60px 0 16px;
   }
 
   .heroVisual {
     width: min(680px, 100%);
     margin: 0 auto;
-    padding: 24px 0 74px;
+    padding: 20px 0 66px;
     transform: none;
   }
 
   .serviceGrid {
     grid-template-columns: 1fr;
+  }
+
+  .service {
+    transform: none;
   }
 
   .serviceCard {
@@ -1257,7 +1273,7 @@
   }
 
   .navbar {
-    height: 66px;
+    height: 62px;
   }
 
   .brand {
@@ -1276,7 +1292,7 @@
   }
 
   .heroCopy {
-    padding-top: 52px;
+    padding-top: 46px;
   }
 
   .heroCopy h1 {
@@ -1285,6 +1301,7 @@
 
   .heroCopy > p {
     font-size: 15px;
+    line-height: 1.78;
   }
 
   .heroProof {
@@ -1365,6 +1382,10 @@
     padding: 68px 0;
   }
 
+  .supportSection {
+    padding: 58px 0;
+  }
+
   .sectionHeading {
     margin-bottom: 30px;
   }
@@ -1382,12 +1403,12 @@
   }
 
   .accessSection {
-    padding: 55px 0;
+    padding: 47px 0;
   }
 
   .accessCard {
     gap: 35px;
-    padding: 34px 24px;
+    padding: 30px 24px;
     border-radius: 24px;
   }
 
@@ -1400,7 +1421,11 @@
   }
 
   .memberCard {
-    padding: 27px;
+    padding: 24px;
+  }
+
+  .stepCard {
+    padding: 23px;
   }
 
   .footerMain {
