@@ -805,8 +805,8 @@
 }
 
 .stepCard {
-  min-height: 248px;
-  padding: 24px;
+  min-height: 245px;
+  padding: 20px 22px;
   border: 1px solid rgba(99, 87, 69, 0.11);
   border-radius: 23px;
   background: rgba(255, 255, 255, 0.64);
@@ -814,7 +814,7 @@
 }
 
 .stepNumber {
-  margin-bottom: 12px;
+  margin-bottom: 9px;
   color: #987746;
   font-size: 11px;
   font-weight: 800;
@@ -823,31 +823,35 @@
 
 .stepIcon {
   display: grid;
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   place-items: center;
-  margin-bottom: 14px;
+  margin-bottom: 11px;
   border-radius: 15px;
   background: #e9e4d8;
   color: var(--olive-dark);
 }
 
 .stepCard h3 {
-  margin: 0 0 9px;
+  margin: 0 0 7px;
   font-family: inherit;
   font-size: 20px;
 }
 
 .stepCard > p {
-  min-height: 60px;
+  min-height: 52px;
   margin: 0;
   color: var(--muted);
   font-size: 14px;
-  line-height: 1.75;
+  line-height: 1.65;
 }
 
 .stepTags {
-  margin-top: 12px;
+  margin-top: 9px;
+}
+
+.stepTags span {
+  padding: 5px 9px;
 }
 
 .journeyLine {
@@ -1425,7 +1429,7 @@
   }
 
   .stepCard {
-    padding: 23px;
+    padding: 20px;
   }
 
   .footerMain {
