@@ -173,6 +173,7 @@ function HeroImage() {
           priority
           sizes="(max-width: 880px) 100vw, 58vw"
           src="/螢幕擷取畫面 2026-08-26 232636.png"
+          unoptimized
         />
       </div>
     </div>
