@@ -1453,3 +1453,23 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+
+/* Preview spacing refinements */
+.howSection {
+  padding: 84px 0;
+}
+
+.faqList summary {
+  min-height: 54px;
+}
+
+.faqList details p {
+  margin-bottom: 13px;
+}
+
+@media (max-width: 600px) {
+  .howSection {
+    padding: 60px 0;
+  }
+}
