@@ -1473,3 +1473,60 @@
     padding: 60px 0;
   }
 }
+
+
+/* Hero uses the approved full-image visual; the source screenshot is cropped non-destructively. */
+.heroVisual {
+  width: calc(100% + 100px);
+  aspect-ratio: 1.3485;
+  margin: 0 -44px 0 -56px;
+  padding: 0;
+  transform: none;
+}
+
+.heroImageFrame {
+  position: absolute;
+  overflow: hidden;
+  inset: 0;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.48) 9%, #000 24%);
+  mask-image: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.48) 9%, #000 24%);
+}
+
+.heroImage {
+  top: -14% !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: -96% !important;
+  width: auto !important;
+  max-width: none !important;
+  height: 121% !important;
+  object-fit: contain;
+  user-select: none;
+}
+
+@media (max-width: 880px) {
+  .heroVisual {
+    width: min(760px, calc(100% + 40px));
+    margin: 0 auto;
+    padding: 0;
+  }
+}
+
+@media (max-width: 600px) {
+  .heroVisual {
+    width: calc(100% + 28px);
+    margin-inline: -14px;
+    padding: 0;
+  }
+}
+
+.heroImageFrame::after {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(248, 246, 240, 0.5) 0%, transparent 11%, transparent 88%, rgba(248, 246, 240, 0.58) 100%),
+    linear-gradient(90deg, transparent 82%, rgba(248, 246, 240, 0.2) 100%);
+  content: "";
+  pointer-events: none;
+}
