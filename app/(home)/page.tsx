@@ -443,37 +443,6 @@ export default async function BestAppStoreHomePage() {
           </div>
         </section>
 
-        <section className={styles.accessSection} aria-labelledby="access-title">
-          <div className={`${styles.shell} ${styles.accessCard}`}>
-            <div className={styles.accessCopy}>
-              <span className={styles.eyebrow}>ONE ACCOUNT, THE RIGHT SPACE</span>
-              <h2 id="access-title">一個帳號，只看與你相關的服務。</h2>
-              <p>
-                不同服務保有各自的內容與空間。登入後，系統會依照您的購買與授權狀態，
-                呈現真正需要的內容，不讓無關資訊干擾使用。
-              </p>
-            </div>
-            <div className={styles.accessMap} aria-label="帳號與服務權限示意">
-              <div className={styles.accountNode}>
-                <UserRound size={22} aria-hidden="true" />
-                <span>BestAppStore 帳號</span>
-              </div>
-              <div className={styles.accessStem} aria-hidden="true" />
-              <div className={styles.spaceGrid}>
-                <span>
-                  <Check size={15} aria-hidden="true" /> 數位應用
-                </span>
-                <span>
-                  <Check size={15} aria-hidden="true" /> 專業服務
-                </span>
-                <span>
-                  <LockKeyhole size={15} aria-hidden="true" /> 依權限顯示
-                </span>
-              </div>
-            </div>
-          </div>
-        </section>
-
         <section className={styles.supportSection} id="support">
           <div className={styles.shell}>
             <div className={styles.sectionHeading}>
