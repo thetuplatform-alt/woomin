@@ -1,16 +1,15 @@
 import type { Metadata } from 'next'
+import Image from 'next/image'
 import Link from 'next/link'
 import {
   ArrowRight,
   Check,
   CircleHelp,
   ExternalLink,
-  Fingerprint,
   LockKeyhole,
   Menu,
   MousePointer2,
   ShieldCheck,
-  Sparkles,
   UserRound,
 } from 'lucide-react'
 import { JsonLd } from '@/components/common/json-ld'
@@ -163,87 +162,18 @@ function MobileNavigation() {
   )
 }
 
-function HeroInterface() {
+function HeroImage() {
   return (
-    <div className={styles.heroVisual} aria-label="BestAppStore 數位服務介面示意圖">
-      <div className={styles.trustChipTop}>
-        <ShieldCheck size={16} aria-hidden="true" />
-        安全可靠
-      </div>
-      <div className={styles.trustChipBottom}>
-        <Fingerprint size={16} aria-hidden="true" />
-        隱私保護
-      </div>
-      <div className={styles.interfaceWindow}>
-        <div className={styles.windowBar}>
-          <span className={styles.windowDots} aria-hidden="true">
-            <i />
-            <i />
-            <i />
-          </span>
-          <span className={styles.windowTitle}>BestAppStore Workspace</span>
-          <span className={styles.avatar}>BA</span>
-        </div>
-        <div className={styles.interfaceBody}>
-          <aside className={styles.interfaceSidebar} aria-hidden="true">
-            <span className={styles.sidebarLogo}>B</span>
-            <i className={styles.active} />
-            <i />
-            <i />
-            <i />
-          </aside>
-          <div className={styles.interfaceContent}>
-            <div className={styles.interfaceHeading}>
-              <div>
-                <small>WELCOME BACK</small>
-                <strong>我的服務空間</strong>
-              </div>
-              <button type="button" tabIndex={-1}>
-                查看全部
-              </button>
-            </div>
-            <div className={styles.metricGrid}>
-              <div className={styles.metricCardPrimary}>
-                <Sparkles size={20} aria-hidden="true" />
-                <span>數位應用</span>
-                <strong>04</strong>
-                <small>可使用的服務</small>
-              </div>
-              <div className={styles.metricCard}>
-                <LockKeyhole size={18} aria-hidden="true" />
-                <span>專業服務</span>
-                <strong>02</strong>
-                <small>已授權的空間</small>
-              </div>
-            </div>
-            <div className={styles.activityCard}>
-              <div className={styles.activityTitle}>
-                <strong>最近使用</strong>
-                <span>已依權限顯示</span>
-              </div>
-              <div className={styles.activityRow}>
-                <span className={styles.activityIcon}>
-                  <MousePointer2 size={15} aria-hidden="true" />
-                </span>
-                <span>
-                  <strong>智慧工作台</strong>
-                  <small>數位應用 · 可使用</small>
-                </span>
-                <Check size={16} aria-label="已授權" />
-              </div>
-              <div className={styles.activityRow}>
-                <span className={styles.activityIconAlt}>
-                  <ShieldCheck size={15} aria-hidden="true" />
-                </span>
-                <span>
-                  <strong>專業服務中心</strong>
-                  <small>服務空間 · 已授權</small>
-                </span>
-                <Check size={16} aria-label="已授權" />
-              </div>
-            </div>
-          </div>
-        </div>
+    <div className={styles.heroVisual}>
+      <div className={styles.heroImageFrame}>
+        <Image
+          alt="筆電與手機呈現 BestAppStore 數位服務，搭配安全可靠、隨時隨地與隱私保護提示"
+          className={styles.heroImage}
+          fill
+          priority
+          sizes="(max-width: 880px) 100vw, 58vw"
+          src="/螢幕擷取畫面 2026-08-26 232636.png"
+        />
       </div>
     </div>
   )
@@ -359,7 +289,7 @@ export default async function BestAppStoreHomePage() {
                 </span>
               </div>
             </div>
-            <HeroInterface />
+            <HeroImage />
           </div>
         </section>
 
