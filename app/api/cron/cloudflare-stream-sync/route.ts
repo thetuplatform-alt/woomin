@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getCloudflareStreamConfigStatus } from '@/lib/cloudflare-stream-config'
 import { syncCloudflareStreamLibrary } from '@/lib/cloudflare-stream-sync'
 
 export async function GET(request: NextRequest) {
@@ -20,6 +21,15 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const configStatus = await getCloudflareStreamConfigStatus()
+    if (!configStatus.hasUploadConfig) {
+      return NextResponse.json({
+        success: true,
+        skipped: true,
+        reason: 'cloudflare_stream_not_configured',
+      })
+    }
+
     const result = await syncCloudflareStreamLibrary()
     return NextResponse.json({ success: true, ...result })
   } catch (error) {
