@@ -12,7 +12,12 @@ import { prisma } from '@/lib/prisma'
 import { AuthError } from 'next-auth'
 import { checkRateLimit, RATE_LIMIT_CONFIGS } from '@/lib/rate-limit'
 import { getPostHogClient, flushPostHogInBackground } from '@/lib/posthog-server'
-import { redirect } from 'next/navigation'
+import { resolveLoginReturnTo } from '@/lib/auth-return-to'
+import { getDefaultPostLoginPath } from '@/lib/entitlements'
+import {
+  GENERAL_EMAIL_CONSENT_VERSION,
+  MARKETING_EMAIL_CONSENT_VERSION,
+} from '@/lib/email-consent'
 
 // ==================== Schema 定義 ====================
 
@@ -67,8 +72,10 @@ export async function loginWithCredentials(
   const { password } = validatedFields.data
 
   // 讀取 callbackUrl（僅允許站內相對路徑）
-  const rawCallbackUrl = formData.get('callbackUrl') as string | null
-  const redirectTo = rawCallbackUrl?.startsWith('/') ? rawCallbackUrl : '/'
+  const requestedReturnTo = resolveLoginReturnTo({
+    returnTo: formData.get('returnTo'),
+    callbackUrl: formData.get('callbackUrl'),
+  })
 
   // 註：速率限制 / 帳號鎖定 / 失敗計數已統一移至 lib/auth.ts 的 authorize()，
   // 確保所有進入點（含直連 callback 端點）都受到保護，這裡不再重複處理（避免雙重計數）。
@@ -111,7 +118,10 @@ export async function loginWithCredentials(
     }
 
     // 返回成功狀態和重導向目標，由 client-side 處理導航
-    return { success: true, redirectTo }
+    return {
+      success: true,
+      redirectTo: requestedReturnTo ?? (user ? await getDefaultPostLoginPath(user.id) : '/my-services'),
+    }
   } catch (error) {
     // 重新拋出 redirect 錯誤，讓 Next.js 正常處理重導向
     if (error instanceof Error && error.message === 'NEXT_REDIRECT') {
@@ -231,6 +241,7 @@ export async function registerUser(
               action: generalEmailConsent ? 'GRANTED' : 'REVOKED',
               source: 'register',
               ip: ipAddress,
+              termsVersion: GENERAL_EMAIL_CONSENT_VERSION,
             },
             {
               email,
@@ -238,6 +249,7 @@ export async function registerUser(
               action: marketingConsent ? 'GRANTED' : 'REVOKED',
               source: 'register',
               ip: ipAddress,
+              termsVersion: MARKETING_EMAIL_CONSENT_VERSION,
             },
           ],
         },
@@ -278,8 +290,10 @@ export async function registerUser(
  * Google OAuth 登入
  */
 export async function loginWithGoogle(formData: FormData) {
-  const rawCallbackUrl = formData.get('callbackUrl') as string | null
-  const redirectTo = rawCallbackUrl?.startsWith('/') ? rawCallbackUrl : '/'
+  const redirectTo = resolveLoginReturnTo({
+    returnTo: formData.get('returnTo'),
+    callbackUrl: formData.get('callbackUrl'),
+  }) ?? '/post-login'
   await signIn('google', { redirectTo }, { prompt: 'select_account' })
 }
 
@@ -287,8 +301,10 @@ export async function loginWithGoogle(formData: FormData) {
  * Apple OAuth 登入
  */
 export async function loginWithApple(formData: FormData) {
-  const rawCallbackUrl = formData.get('callbackUrl') as string | null
-  const redirectTo = rawCallbackUrl?.startsWith('/') ? rawCallbackUrl : '/'
+  const redirectTo = resolveLoginReturnTo({
+    returnTo: formData.get('returnTo'),
+    callbackUrl: formData.get('callbackUrl'),
+  }) ?? '/post-login'
   await signIn('apple', { redirectTo })
 }
 

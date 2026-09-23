@@ -51,7 +51,7 @@ export function AnalyticsSettingsForm({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(siteSettingsSchema) as any,
     defaultValues: {
-      siteName: initialSettings[SETTING_KEYS.SITE_NAME] || 'WooMin',
+      siteName: initialSettings[SETTING_KEYS.SITE_NAME] || 'BestAppStore',
       siteLogo: initialSettings[SETTING_KEYS.SITE_LOGO] || '',
       shareTitle: initialSettings[SETTING_KEYS.SHARE_TITLE] || '',
       shareDescription: initialSettings[SETTING_KEYS.SHARE_DESCRIPTION] || '',

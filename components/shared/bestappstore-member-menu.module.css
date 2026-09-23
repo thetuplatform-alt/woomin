@@ -1,0 +1,196 @@
+.loginLink,
+.memberTrigger {
+  align-items: center;
+  border: 1px solid rgba(116, 130, 94, 0.72);
+  border-radius: 999px;
+  color: #51594a;
+  display: inline-flex;
+  font-size: 14px;
+  justify-content: center;
+  min-height: 42px;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.loginLink {
+  padding: 0 18px;
+  white-space: nowrap;
+}
+
+.loginLink:hover,
+.memberTrigger:hover,
+.memberMenu[open] .memberTrigger {
+  background: rgba(232, 237, 223, 0.72);
+  border-color: #71805f;
+  color: #566448;
+}
+
+.memberMenu {
+  position: relative;
+}
+
+.memberTrigger {
+  cursor: pointer;
+  gap: 9px;
+  list-style: none;
+  padding: 4px 11px 4px 5px;
+}
+
+.memberTrigger::-webkit-details-marker {
+  display: none;
+}
+
+.avatar {
+  align-items: center;
+  background: linear-gradient(145deg, #82916f, #647354);
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(73, 83, 61, 0.18);
+  color: #fffdf8;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 11px;
+  font-weight: 700;
+  height: 32px;
+  justify-content: center;
+  letter-spacing: -0.03em;
+  overflow: hidden;
+  width: 32px;
+}
+
+.avatar img {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.memberName {
+  max-width: 128px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chevron {
+  transition: transform 160ms ease;
+}
+
+.memberMenu[open] .chevron {
+  transform: rotate(180deg);
+}
+
+.menuPanel {
+  background: #fffdf8;
+  border: 1px solid rgba(82, 91, 75, 0.16);
+  border-radius: 18px;
+  box-shadow: 0 20px 50px rgba(55, 61, 49, 0.16);
+  color: #3f443d;
+  min-width: 286px;
+  padding: 9px;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  z-index: 90;
+}
+
+.profileSummary {
+  align-items: center;
+  border-bottom: 1px solid rgba(82, 91, 75, 0.12);
+  display: flex;
+  gap: 11px;
+  margin: 0 4px;
+  padding: 8px 7px 13px;
+}
+
+.profileSummary > span:last-child {
+  display: grid;
+  min-width: 0;
+}
+
+.profileSummary strong,
+.profileSummary small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profileSummary strong {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.profileSummary small {
+  color: #858a81;
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.menuItems {
+  display: grid;
+  gap: 2px;
+  padding-block: 7px;
+}
+
+.menuItems a,
+.signOutButton {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 11px;
+  color: #51574e;
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  font-size: 13px;
+  gap: 10px;
+  min-height: 42px;
+  padding: 9px 11px;
+  text-align: left;
+  width: 100%;
+}
+
+.menuItems a:hover,
+.menuItems a:focus-visible,
+.signOutButton:hover,
+.signOutButton:focus-visible {
+  background: #eef1e8;
+  color: #5d6c4d;
+  outline: none;
+}
+
+.signOutButton {
+  border-top: 1px solid rgba(82, 91, 75, 0.12);
+  border-radius: 0 0 11px 11px;
+  color: #7a554d;
+  padding-top: 12px;
+}
+
+.compact .memberName {
+  display: none;
+}
+
+.compact .memberTrigger {
+  gap: 4px;
+  min-height: 40px;
+  padding-right: 7px;
+}
+
+.compactLogin {
+  font-size: 13px;
+  min-height: 40px;
+  padding-inline: 14px;
+}
+
+@media (max-width: 420px) {
+  .menuPanel {
+    position: fixed;
+    right: 14px;
+    top: 68px;
+    width: min(286px, calc(100vw - 28px));
+  }
+
+  .compactLogin {
+    font-size: 12px;
+    padding-inline: 11px;
+  }
+}

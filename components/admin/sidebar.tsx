@@ -41,6 +41,7 @@ import {
   ArrowLeft,
   LogOut,
   User,
+  Wrench,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -67,6 +68,7 @@ const sidebarGroups = [
     items: [
       { title: "課程管理", href: "/admin/courses", icon: BookOpen, adminOnly: false },
       { title: "課程組合包", href: "/admin/bundles", icon: Package, adminOnly: true },
+      { title: "工具管理", href: "/admin/tools", icon: Wrench, adminOnly: true },
       { title: "媒體中心", href: "/admin/media", icon: ImageIcon, adminOnly: false },
     ],
   },
@@ -224,24 +226,20 @@ export function Sidebar({ className, userRole, user }: SidebarProps) {
                 isActuallyCollapsed ? "justify-center" : "gap-3 px-1 pt-2"
               )}
             >
-              <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center overflow-hidden rounded-2xl">
-                <Image
-                  src="/icon-nobackground.png"
-                  alt="Logo"
-                  width={28}
-                  height={28}
-                  className="h-full w-full object-cover"
-                />
-              </span>
               <span
                 className={cn(
-                  "font-semibold text-foreground transition-all duration-300 whitespace-nowrap",
-                  isActuallyCollapsed
-                    ? "opacity-0 w-0 overflow-hidden"
-                    : "opacity-70"
+                  "flex h-8 flex-shrink-0 items-center justify-center overflow-hidden",
+                  isActuallyCollapsed ? "w-8" : "w-[132px]"
                 )}
               >
-                WooMin
+                <Image
+                  src={isActuallyCollapsed ? "/bestappstore-icon.png" : "/bestappstore-logo.png"}
+                  alt="BestAppStore"
+                  width={isActuallyCollapsed ? 512 : 2160}
+                  height={isActuallyCollapsed ? 512 : 728}
+                  sizes={isActuallyCollapsed ? "32px" : "132px"}
+                  className="h-auto w-full object-contain"
+                />
               </span>
             </div>
           </div>

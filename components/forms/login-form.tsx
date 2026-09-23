@@ -16,7 +16,7 @@ import { Loader2 } from 'lucide-react'
 const initialState: { error?: string; success?: boolean; redirectTo?: string } = {}
 
 interface LoginFormProps {
-  callbackUrl?: string
+  returnTo?: string
   oauthErrorMessage?: string
   resetSuccess?: boolean
   googleEnabled?: boolean
@@ -24,7 +24,7 @@ interface LoginFormProps {
 }
 
 export function LoginForm({
-  callbackUrl,
+  returnTo,
   oauthErrorMessage,
   resetSuccess,
   googleEnabled = true,
@@ -36,9 +36,9 @@ export function LoginForm({
     if (state?.success) {
       // PostHog 登入事件已在伺服器端 (lib/actions/auth.ts) 追蹤，此處不重複追蹤
       // 使用硬導向確保瀏覽器帶著新的 session cookie 發起請求
-      window.location.href = state.redirectTo || callbackUrl || '/'
+      window.location.href = state.redirectTo || returnTo || '/my-services'
     }
-  }, [state?.success, state?.redirectTo, callbackUrl])
+  }, [state?.success, state?.redirectTo, returnTo])
 
   return (
     <div className="rounded-2xl border border-divider bg-white p-8 shadow-none">
@@ -66,8 +66,8 @@ export function LoginForm({
           <div className={`grid gap-4 ${googleEnabled && appleEnabled ? 'grid-cols-2' : 'grid-cols-1'}`}>
             {googleEnabled && (
               <form action={loginWithGoogle}>
-                {callbackUrl && (
-                  <input type="hidden" name="callbackUrl" value={callbackUrl} />
+                {returnTo && (
+                  <input type="hidden" name="returnTo" value={returnTo} />
                 )}
                 <Button
                   variant="outline"
@@ -81,8 +81,8 @@ export function LoginForm({
             )}
             {appleEnabled && (
               <form action={loginWithApple}>
-                {callbackUrl && (
-                  <input type="hidden" name="callbackUrl" value={callbackUrl} />
+                {returnTo && (
+                  <input type="hidden" name="returnTo" value={returnTo} />
                 )}
                 <Button
                   variant="outline"
@@ -113,8 +113,8 @@ export function LoginForm({
 
         {/* 電子郵件登入表單 */}
         <form action={formAction} className="space-y-4">
-          {callbackUrl && (
-            <input type="hidden" name="callbackUrl" value={callbackUrl} />
+          {returnTo && (
+            <input type="hidden" name="returnTo" value={returnTo} />
           )}
           {/* 錯誤訊息 */}
           {state?.error && (

@@ -36,15 +36,15 @@ export interface PublicSiteSettings {
 }
 
 export const PUBLIC_SITE_DEFAULTS: PublicSiteSettings = {
-  siteName: 'WooMin',
+  siteName: 'BestAppStore',
   siteLogo: DEFAULT_SITE_ICON_PATH,
   shareTitle: '',
-  shareDescription: '一個可自訂品牌與課程內容的線上課程平台。',
+  shareDescription: '整合數位應用、專業服務與精選內容的多系列會員服務平台。',
   shareLogo: '',
   shareImage: '',
-  contactEmail: 'support@example.com',
-  brandDisplayName: 'WooMin',
-  brandSubtitle: 'Learning System',
+  contactEmail: 'service@bestappstore.co.uk',
+  brandDisplayName: 'BestAppStore',
+  brandSubtitle: 'Member Services',
   googleLoginEnabled: false,
   appleLoginEnabled: false,
   headerLeftLinks: [],

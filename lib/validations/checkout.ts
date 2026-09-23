@@ -21,6 +21,9 @@ export const createOrderSchema = z
     name: z.string().trim().max(50, '姓名不能超過 50 個字元').optional(),
     couponCode: z.string().max(50).optional(),
     invite: z.string().trim().min(1).max(256).optional(),
+    agreedTerms: z.literal(true, {
+      error: '必須同意服務條款、隱私權政策與數位內容提供條款才能付款',
+    }),
     generalEmailConsent: z.boolean().optional().default(false),
     marketingConsent: z.boolean().optional().default(false),
     // 臺灣電子發票買受人資訊（發票功能啟用時由結帳頁送出）

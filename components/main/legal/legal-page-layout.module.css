@@ -1,0 +1,75 @@
+.page {
+  --paper-light: #fcfbf7;
+  --ink: #2c2924;
+  --muted: #6d685f;
+  --olive: #747d58;
+  --olive-dark: #596144;
+  --line: rgba(87, 76, 58, 0.13);
+  --bestappstore-logo-background: #fcfbf7;
+  min-height: 100vh;
+  color: var(--ink);
+  background: var(--paper-light);
+  font-family: var(--font-geist-sans), "PingFang TC", "Microsoft JhengHei", sans-serif;
+}
+
+.page *, .page *::before, .page *::after { box-sizing: border-box; }
+.page a { color: inherit; text-decoration: none; }
+.page a:focus-visible, .page button:focus-visible { outline: 3px solid rgba(89,97,68,.42); outline-offset: 3px; border-radius: 6px; }
+.shell { width: min(1120px, calc(100% - 48px)); margin-inline: auto; }
+.header { position: sticky; z-index: 20; top: 0; border-bottom: 1px solid rgba(95,82,62,.08); background: rgba(250,248,243,.91); backdrop-filter: blur(18px); }
+.navbar { display: flex; min-height: 64px; align-items: center; justify-content: space-between; gap: 24px; }
+.brandLink { display: inline-flex; }
+.navigation { display: flex; align-items: center; gap: 28px; color: #565047; font-size: 14px; }
+.navigation a { transition: color .18s ease; }
+.navigation a:hover { color: var(--olive-dark); }
+.loginLink { padding: 9px 18px; border: 1px solid var(--olive); border-radius: 999px; }
+.hero { border-bottom: 1px solid var(--line); background: radial-gradient(circle at 78% 24%, rgba(183,158,111,.18), transparent 28%), linear-gradient(135deg, #fbfaf6, #f1ede3); }
+.heroInner { display: flex; min-height: 310px; align-items: end; justify-content: space-between; gap: 56px; padding-block: 72px 58px; }
+.heroInner > div { max-width: 720px; }
+.eyebrow { color: #93713b; font-size: 11px; font-weight: 800; letter-spacing: .18em; }
+.hero h1 { margin: 18px 0 13px; font-family: "Songti TC", "PMingLiU", Georgia, serif; font-size: clamp(42px, 5vw, 62px); font-weight: 600; letter-spacing: -.045em; line-height: 1.13; }
+.hero p { max-width: 660px; margin: 0; color: var(--muted); font-size: 15px; line-height: 1.85; }
+.updated { flex: 0 0 auto; padding: 9px 13px; border: 1px solid rgba(116,125,88,.17); border-radius: 999px; background: rgba(255,255,255,.55); color: #777167; font-size: 12px; white-space: nowrap; }
+.contentSection { padding-block: 72px 96px; }
+.contentShell { width: min(820px, calc(100% - 48px)); margin-inline: auto; }
+.content { color: #514d46; font-size: 16px; line-height: 1.9; }
+.content > :first-child { margin-top: 0; }
+.content h2, .content h3 { color: var(--ink); font-family: "Songti TC", "PMingLiU", Georgia, serif; font-weight: 600; letter-spacing: -.02em; }
+.content h2 { margin: 54px 0 18px; font-size: 28px; line-height: 1.35; }
+.content h3 { margin: 46px 0 16px; padding-top: 4px; font-size: 24px; line-height: 1.4; }
+.content p { margin: 0 0 19px; }
+.content ul, .content ol { display: grid; gap: 11px; margin: 0 0 24px; padding-left: 1.45em; }
+.content li { padding-left: .35em; }
+.content li::marker { color: #8a936f; font-weight: 700; }
+.content strong { color: #35332f; font-weight: 750; }
+.content a { color: var(--olive-dark); text-decoration: underline; text-decoration-color: rgba(89,97,68,.35); text-underline-offset: 3px; }
+.footer { border-top: 1px solid var(--line); background: #efebe2; }
+.footerMain { display: flex; align-items: end; justify-content: space-between; gap: 36px; padding-block: 46px 34px; }
+.footerMain p { margin: 14px 0 0; color: var(--muted); font-size: 13px; }
+.footerMain nav { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 24px; color: #625d55; font-size: 13px; }
+.footerMain nav a { display: inline-flex; align-items: center; gap: 5px; }
+.copyright { border-top: 1px solid var(--line); padding-block: 17px; color: #8a857c; font-size: 11px; }
+
+@media (max-width: 720px) {
+  .shell, .contentShell { width: min(100% - 40px, 820px); }
+  .navbar { min-height: 60px; }
+  .navigation a:not(.loginLink) { display: none; }
+  .loginLink { padding: 8px 14px; font-size: 12px; }
+  .heroInner { min-height: 270px; align-items: flex-start; flex-direction: column; gap: 24px; padding-block: 52px 42px; }
+  .hero h1 { font-size: clamp(38px, 12vw, 50px); }
+  .hero p { font-size: 14px; line-height: 1.75; }
+  .updated { white-space: normal; }
+  .contentSection { padding-block: 50px 68px; }
+  .content { font-size: 15px; line-height: 1.85; }
+  .content h2 { margin-top: 42px; font-size: 25px; }
+  .content h3 { margin-top: 38px; font-size: 22px; }
+  .content ul, .content ol { gap: 10px; padding-left: 1.25em; }
+  .footerMain { align-items: flex-start; flex-direction: column; }
+  .footerMain nav { display: grid; justify-content: start; gap: 14px; }
+}
+
+@media (max-width: 340px) {
+  .shell, .contentShell { width: calc(100% - 32px); }
+  .navigation { gap: 10px; }
+  .loginLink { padding-inline: 11px; }
+}

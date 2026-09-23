@@ -11,7 +11,7 @@ import {
   type EmailTransportSnapshot,
 } from '@/lib/email-transport'
 import { getNewsletterSettings } from '@/lib/newsletter/settings'
-import { assertEmailConsent, createUnsubscribeToken } from '@/lib/newsletter/consent'
+import { assertBestAppStoreEmailConsent, createUnsubscribeToken } from '@/lib/newsletter/consent'
 import { processPendingUnsubscribeOutbox } from '@/lib/newsletter/unsubscribe-outbox'
 import { getAudienceUsers, parseSegmentJson } from '@/lib/newsletter/audience'
 import { makeTrackingToken, normalizeNewsletterContent, renderBodyText, renderCampaignHtml } from '@/lib/newsletter/render'
@@ -84,7 +84,7 @@ export async function prepareNewsletterRecipients(campaignId: string) {
   })
   for (const user of users) {
     const consentType = campaign.type === 'PROMO' ? 'marketing' : 'general'
-    const consent = await assertEmailConsent(user.id, consentType, user.email)
+    const consent = await assertBestAppStoreEmailConsent(user.id, consentType, user.email)
     const existing = await prisma.newsletterRecipient.findUnique({
       where: { campaignId_toEmail: { campaignId, toEmail: user.email.toLowerCase() } },
       select: { status: true, isTest: true },
@@ -184,7 +184,7 @@ async function prepareRecipientEmail(
   snapshot: NewsletterSenderSnapshot
 ): Promise<EmailPayload | null> {
   const consentType = campaign.type === 'PROMO' ? 'marketing' : 'general'
-  const consent = await assertEmailConsent(recipient.userId, consentType, recipient.toEmail)
+  const consent = await assertBestAppStoreEmailConsent(recipient.userId, consentType, recipient.toEmail)
   if (!consent.allowed) {
     const skipped = await prisma.newsletterRecipient.updateMany({
       where: { id: recipient.id, status: 'PROCESSING' },

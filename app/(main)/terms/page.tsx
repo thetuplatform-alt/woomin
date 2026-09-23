@@ -4,8 +4,12 @@
 
 import { Metadata } from 'next'
 import { LegalPageLayout, LegalMarkdownContent } from '@/components/main/legal'
-import { getPublicSiteSettings } from '@/lib/site-settings-public'
-import { prisma } from '@/lib/prisma'
+import {
+  LEGAL_BRAND_NAME,
+  LEGAL_CONTACT_EMAIL,
+  normalizeLegalBranding,
+} from '@/lib/legal-branding'
+import { findOptionalLegalSiteSetting } from '@/lib/legal-site-setting'
 import { SETTING_KEYS } from '@/lib/validations/settings'
 
 export const dynamic = 'force-dynamic'
@@ -15,28 +19,28 @@ function formatDate(date: Date): string {
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-  const { siteName } = await getPublicSiteSettings()
+  const siteName = LEGAL_BRAND_NAME
   const title = `用戶服務條款 | ${siteName}`
   const description = `${siteName}服務條款。`
   return {
-    title,
+    title: { absolute: title },
     description,
     openGraph: { title, description },
   }
 }
 
 export default async function TermsPage() {
-  const [{ siteName, contactEmail, brandDisplayName }, custom] = await Promise.all([
-    getPublicSiteSettings(),
-    prisma.siteSetting.findUnique({ where: { key: SETTING_KEYS.LEGAL_TERMS_MD } }),
-  ])
+  const custom = await findOptionalLegalSiteSetting(SETTING_KEYS.LEGAL_TERMS_MD)
+  const siteName = LEGAL_BRAND_NAME
+  const brandDisplayName = LEGAL_BRAND_NAME
+  const contactEmail = LEGAL_CONTACT_EMAIL
 
   const lastUpdated = custom?.updatedAt ? formatDate(custom.updatedAt) : formatDate(new Date())
 
   if (custom?.value?.trim()) {
     return (
       <LegalPageLayout title="用戶服務條款" lastUpdated={lastUpdated}>
-        <LegalMarkdownContent content={custom.value} />
+        <LegalMarkdownContent content={normalizeLegalBranding(custom.value)} />
       </LegalPageLayout>
     )
   }

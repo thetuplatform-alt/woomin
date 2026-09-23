@@ -7,14 +7,16 @@ import Link from 'next/link'
 import { LoginForm } from '@/components/forms/login-form'
 import { AuthPageWrapper } from '@/components/auth/auth-page-wrapper'
 import { getPublicSiteSettings } from '@/lib/site-settings-public'
+import { resolveLoginReturnTo } from '@/lib/auth-return-to'
 
 export const metadata: Metadata = {
-  title: '登入 | 課程平台',
-  description: '登入您的帳號以開始學習線上課程',
+  title: '登入 | BestAppStore',
+  description: '登入 BestAppStore 會員帳號，前往您已取得的系列服務。',
 }
 
 interface LoginPageProps {
   searchParams: Promise<{
+    returnTo?: string
     callbackUrl?: string
     error?: string
     reset?: string
@@ -22,7 +24,8 @@ interface LoginPageProps {
 }
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
-  const { callbackUrl, error, reset } = await searchParams
+  const { returnTo, callbackUrl, error, reset } = await searchParams
+  const safeReturnTo = resolveLoginReturnTo({ returnTo, callbackUrl }) ?? undefined
   const resetSuccess = reset === 'true'
   const { googleLoginEnabled, appleLoginEnabled } = await getPublicSiteSettings()
 
@@ -52,7 +55,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
       {/* 登入表單 */}
       <LoginForm
-        callbackUrl={callbackUrl}
+        returnTo={safeReturnTo}
         oauthErrorMessage={oauthErrorMessage}
         resetSuccess={resetSuccess}
         googleEnabled={googleLoginEnabled}
@@ -63,7 +66,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       <div className="text-center text-sm text-body">
         還沒有帳號？{' '}
         <Link
-          href={callbackUrl ? `/register?callbackUrl=${encodeURIComponent(callbackUrl)}` : '/register'}
+          href={safeReturnTo ? `/register?callbackUrl=${encodeURIComponent(safeReturnTo)}` : '/register'}
           className="font-semibold text-cta hover:text-cta-hover transition-colors"
         >
           立即註冊

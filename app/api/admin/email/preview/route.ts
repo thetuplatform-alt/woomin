@@ -13,6 +13,7 @@ import { prisma } from '@/lib/prisma'
 import { SETTING_KEYS } from '@/lib/validations/settings'
 import { resolveAppUrl } from '@/lib/app-url'
 import { resolveAssetUrl } from '@/lib/asset-url'
+import { getDisplaySiteName } from '@/lib/site-brand'
 
 export async function GET(request: Request) {
   const session = await auth()
@@ -30,8 +31,8 @@ export async function GET(request: Request) {
 
   const appUrl = await resolveAppUrl({ headers: new Headers(request.headers) })
   const branding = {
-    siteName: siteName?.value || 'WooMin',
-    siteLogo: resolveAssetUrl(siteLogo?.value, appUrl) || `${appUrl}/icon.png`,
+    siteName: getDisplaySiteName(siteName?.value),
+    siteLogo: resolveAssetUrl(siteLogo?.value, appUrl) || `${appUrl}/bestappstore-logo.png`,
   }
 
   let html = ''

@@ -1,5 +1,6 @@
 import crypto from 'crypto'
 import { prisma } from '@/lib/prisma'
+import { isCurrentEmailConsentVersion } from '@/lib/email-consent'
 
 export type ConsentEmailType = 'transactional' | 'general' | 'marketing'
 export type UnsubscribeScope = 'all' | 'marketing' | 'general'
@@ -138,6 +139,41 @@ export async function assertEmailConsent(
   }
 
   return { allowed: false, reason: fallbackEmail ? 'unknown_type' : 'unknown_type' }
+}
+
+/**
+ * BestAppStore 全系列 Email 僅接受目前版本的明確 opt-in。
+ * 舊版或 termsVersion=null 的紀錄仍保留，但不得被視為新版全系列同意。
+ */
+export async function assertBestAppStoreEmailConsent(
+  userId: string | null | undefined,
+  type: ConsentEmailType,
+  fallbackEmail?: string
+): Promise<ConsentResult> {
+  const baseConsent = await assertEmailConsent(userId, type, fallbackEmail)
+  if (!baseConsent.allowed || type === 'transactional') return baseConsent
+
+  const email = fallbackEmail?.trim().toLowerCase()
+  const latestConsent = await prisma.emailConsentLog.findFirst({
+    where: {
+      ...(userId ? { userId } : { email }),
+      consentType: type === 'marketing' ? 'MARKETING' : 'GENERAL',
+    },
+    orderBy: { createdAt: 'desc' },
+    select: { action: true, termsVersion: true },
+  })
+
+  if (
+    latestConsent?.action !== 'GRANTED' ||
+    !isCurrentEmailConsentVersion(type, latestConsent.termsVersion)
+  ) {
+    return {
+      allowed: false,
+      reason: `current_${type}_consent_required`,
+    }
+  }
+
+  return { allowed: true }
 }
 
 export async function applyUnsubscribe(params: {

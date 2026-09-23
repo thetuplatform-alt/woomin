@@ -16,7 +16,15 @@ function getIcon(iconName?: string): React.ReactNode | null {
   return <Icon className="h-4 w-4" aria-hidden="true" />
 }
 
-// 預設的法律連結區塊
+// 預設的公開支援與法律連結區塊。DB 自訂 footer sections 仍會完整取代這些 fallback。
+const DEFAULT_SUPPORT_SECTION: FooterSection = {
+  title: '支援服務',
+  links: [
+    { label: '使用說明', url: '/help' },
+    { label: '支援中心', url: '/support' },
+  ],
+}
+
 const DEFAULT_LEGAL_SECTION: FooterSection = {
   title: '法律資訊',
   links: [
@@ -37,7 +45,9 @@ export async function MainFooter() {
   } = await getPublicSiteSettings()
 
   // 如果沒有設定任何 footer section，使用預設的法律連結
-  const sections = footerSections.length > 0 ? footerSections : [DEFAULT_LEGAL_SECTION]
+  const sections = footerSections.length > 0
+    ? footerSections
+    : [DEFAULT_SUPPORT_SECTION, DEFAULT_LEGAL_SECTION]
 
   return (
     <footer data-main-footer="true" className="border-t border-divider bg-white">

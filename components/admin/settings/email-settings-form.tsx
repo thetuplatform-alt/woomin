@@ -657,13 +657,13 @@ export function EmailSettingsForm({
                           </FormLabel>
                           <FormControl>
                             <Input
-                              placeholder="我的課程平台"
+                              placeholder="BestAppStore"
                               className="bg-white border-divider text-heading placeholder:text-caption focus:border-cta focus-visible:ring-cta/20"
                               {...field}
                             />
                           </FormControl>
                           <FormDescription className="text-caption">
-                            Email 顯示的發送者名稱，例如：我的課程平台 &lt;hello@example.com&gt;
+                            Email 顯示的發送者名稱，例如：BestAppStore &lt;service@bestappstore.co.uk&gt;
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
@@ -713,7 +713,7 @@ export function EmailSettingsForm({
                           <FormItem>
                             <FormLabel className="text-heading">電子報寄件人名稱</FormLabel>
                             <FormControl>
-                              <Input className="bg-white border-divider" placeholder="我的課程平台" {...field} />
+                              <Input className="bg-white border-divider" placeholder="BestAppStore" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -726,7 +726,7 @@ export function EmailSettingsForm({
                           <FormItem>
                             <FormLabel className="text-heading">電子報 Reply-To</FormLabel>
                             <FormControl>
-                              <Input className="bg-white border-divider" placeholder="support@example.com" {...field} />
+                              <Input className="bg-white border-divider" placeholder="service@bestappstore.co.uk" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -773,7 +773,7 @@ export function EmailSettingsForm({
                           <FormItem>
                             <FormLabel className="text-heading">頁尾聯絡 Email</FormLabel>
                             <FormControl>
-                              <Input className="bg-white border-divider" placeholder="support@example.com" {...field} />
+                              <Input className="bg-white border-divider" placeholder="service@bestappstore.co.uk" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>

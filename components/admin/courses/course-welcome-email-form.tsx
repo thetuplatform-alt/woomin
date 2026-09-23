@@ -86,7 +86,7 @@ export function CourseWelcomeEmailForm({
       userName: '測試學員',
       courseTitle,
       courseUrl: `https://your-domain.com/courses/${courseSlug}`,
-      supportEmail: 'support@example.com',
+      supportEmail: 'service@bestappstore.co.uk',
       purchaseDate: new Date().toLocaleDateString('zh-TW', {
         timeZone: 'Asia/Taipei',
         year: 'numeric',

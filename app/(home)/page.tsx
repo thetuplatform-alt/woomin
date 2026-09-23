@@ -5,15 +5,21 @@ import {
   ArrowRight,
   Check,
   CircleHelp,
+  Download,
   ExternalLink,
+  Handshake,
   LockKeyhole,
   Menu,
   MousePointer2,
   ShieldCheck,
+  Sparkles,
   UserRound,
 } from 'lucide-react'
 import { JsonLd } from '@/components/common/json-ld'
+import { BestAppStoreBrand } from '@/components/shared/bestappstore-brand'
+import { BestAppStoreMemberMenu, type BestAppStoreHeaderUser } from '@/components/shared/bestappstore-member-menu'
 import { resolveAppUrl } from '@/lib/app-url'
+import { auth } from '@/lib/auth'
 import styles from './home.module.css'
 
 const pageTitle = 'BestAppStore｜數位應用・專業服務・精選內容'
@@ -76,6 +82,27 @@ const services = [
   },
 ] as const
 
+const serviceVisuals = {
+  digital: {
+    icon: Download,
+    eyebrow: 'DIGITAL DELIVERY',
+    primary: 'APP',
+    layers: ['FILE', 'READY'],
+  },
+  service: {
+    icon: Handshake,
+    eyebrow: 'GUIDED SERVICE',
+    primary: 'TOGETHER',
+    layers: ['FLOW', 'SUPPORT'],
+  },
+  curated: {
+    icon: Sparkles,
+    eyebrow: 'CURATED PICKS',
+    primary: 'SELECTED',
+    layers: ['SORT', 'KEEP'],
+  },
+} as const
+
 const steps = [
   {
     number: '01',
@@ -121,26 +148,18 @@ const faqs = [
   },
 ] as const
 
-function Brand() {
-  return (
-    <span className={styles.brand} aria-label="BestAppStore">
-      <span className={styles.brandMark} aria-hidden="true">
-        B
-      </span>
-      <span>BestAppStore</span>
-    </span>
-  )
+function Brand({ compact = false }: { compact?: boolean }) {
+  return <BestAppStoreBrand compact={compact} />
 }
 
-function DesktopNavigation() {
+function DesktopNavigation({ user }: { user: BestAppStoreHeaderUser | null }) {
   return (
     <nav className={styles.desktopNav} aria-label="主要導覽">
       <a href="#about">關於我們</a>
-      <a href="#how">使用說明</a>
-      <a href="#support">支援中心</a>
-      <Link className={styles.loginLink} href="/login">
-        會員登入
-      </Link>
+      <Link href="/lumi-series">Lumi Series</Link>
+      <Link href="/help">使用說明</Link>
+      <Link href="/support">支援中心</Link>
+      <BestAppStoreMemberMenu user={user} />
     </nav>
   )
 }
@@ -154,9 +173,9 @@ function MobileNavigation() {
       </summary>
       <nav aria-label="行動版導覽">
         <a href="#about">關於我們</a>
-        <a href="#how">使用說明</a>
-        <a href="#support">支援中心</a>
-        <Link href="/login">會員登入</Link>
+        <Link href="/lumi-series">Lumi Series</Link>
+        <Link href="/help">使用說明</Link>
+        <Link href="/support">支援中心</Link>
       </nav>
     </details>
   )
@@ -181,48 +200,47 @@ function HeroImage() {
 }
 
 function ServiceArt({ tone }: { tone: (typeof services)[number]['tone'] }) {
-  if (tone === 'digital') {
-    return (
-      <div className={`${styles.serviceArt} ${styles.digitalArt}`} aria-hidden="true">
-        <div className={styles.miniWindow}>
-          <span className={styles.miniDots}>
-            <i />
-            <i />
-            <i />
-          </span>
-          <div className={styles.miniGrid}>
-            <i />
-            <i />
-            <i />
-            <i />
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (tone === 'service') {
-    return (
-      <div className={`${styles.serviceArt} ${styles.serviceArtFlow}`} aria-hidden="true">
-        <span className={styles.flowCore}>服務</span>
-        <span className={`${styles.flowNode} ${styles.flowNodeOne}`}>流程</span>
-        <span className={`${styles.flowNode} ${styles.flowNodeTwo}`}>內容</span>
-        <span className={`${styles.flowNode} ${styles.flowNodeThree}`}>安心</span>
-      </div>
-    )
-  }
-
+  const visual = serviceVisuals[tone]
+  const Icon = visual.icon
   return (
-    <div className={`${styles.serviceArt} ${styles.curatedArt}`} aria-hidden="true">
-      <i />
-      <i />
-      <i />
+    <div className={`${styles.serviceArt} ${styles.serviceArtV2}`} data-tone={tone} aria-hidden="true">
+      <span className={styles.serviceVisualGlow} />
+      <span className={styles.serviceVisualFloor} />
+      <div className={styles.serviceVisualPrimary}>
+        <span className={styles.serviceVisualIcon}><Icon size={25} /></span>
+        <small>{visual.eyebrow}</small>
+        <strong>{visual.primary}</strong>
+        <i />
+        <i />
+      </div>
+      <div className={styles.serviceVisualLayers}>
+        {visual.layers.map((layer, index) => (
+          <span key={layer}>
+            <i>{index + 1}</i>
+            <b>{layer}</b>
+          </span>
+        ))}
+      </div>
+      <span className={styles.serviceVisualSignal}><Check size={12} /></span>
     </div>
+  )
+}
+
+function StepVisual({ Icon, index }: { Icon: (typeof steps)[number]['icon']; index: number }) {
+  return (
+    <span className={styles.stepVisual} data-step={index + 1} aria-hidden="true">
+      <i className={styles.stepVisualBack} />
+      <i className={styles.stepVisualPath} />
+      <span className={styles.stepVisualIcon}><Icon size={21} /></span>
+      <i className={styles.stepVisualPoint} />
+    </span>
   )
 }
 
 export default async function BestAppStoreHomePage() {
   const appUrl = await resolveAppUrl()
+  const session = await auth()
+  const headerUser = session?.user ?? null
   const organizationJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
@@ -254,8 +272,11 @@ export default async function BestAppStoreHomePage() {
             <a href="#top">
               <Brand />
             </a>
-            <DesktopNavigation />
-            <MobileNavigation />
+            <DesktopNavigation user={headerUser} />
+            <div className={styles.mobileHeaderActions}>
+              <BestAppStoreMemberMenu compact user={headerUser} />
+              <MobileNavigation />
+            </div>
           </div>
         </div>
       </header>
@@ -266,18 +287,23 @@ export default async function BestAppStoreHomePage() {
             <div className={styles.heroCopy}>
               <span className={styles.eyebrow}>A BETTER DIGITAL EXPERIENCE</span>
               <h1>
-                好的選擇，
-                <br />
-                值得更好的體驗。
+                <span className={styles.heroHeadlineLine}>好的選擇，</span>
+                <span className={styles.heroHeadlineLine}>值得更好的體驗。</span>
               </h1>
               <p>
                 從數位應用、專業服務到精選內容，BestAppStore
                 希望讓每一次使用，都更簡單、清楚而安心。
               </p>
-              <a className={styles.primaryButton} href="#about">
-                了解 BestAppStore
-                <ArrowRight size={17} aria-hidden="true" />
-              </a>
+              <div className={styles.heroActions}>
+                <a className={styles.primaryButton} href="#about">
+                  了解 BestAppStore
+                  <ArrowRight size={17} aria-hidden="true" />
+                </a>
+                <Link className={styles.secondaryButton} href="/lumi-series">
+                  探索 Lumi Series
+                  <ArrowRight size={17} aria-hidden="true" />
+                </Link>
+              </div>
               <div className={styles.heroProof} aria-label="服務特色">
                 <span>
                   <ShieldCheck size={15} aria-hidden="true" /> 安全可靠
@@ -350,10 +376,10 @@ export default async function BestAppStoreHomePage() {
                 return (
                   <div className={styles.journeyItem} key={step.number}>
                     <article className={styles.stepCard}>
-                      <div className={styles.stepNumber}>{step.number}</div>
-                      <span className={styles.stepIcon}>
-                        <Icon size={21} aria-hidden="true" />
-                      </span>
+                      <div className={styles.stepTopline}>
+                        <div className={styles.stepNumber}>{step.number}</div>
+                        <StepVisual Icon={Icon} index={index} />
+                      </div>
                       <h3>{step.title}</h3>
                       <p>{step.description}</p>
                       <div className={styles.stepTags}>
@@ -417,12 +443,12 @@ export default async function BestAppStoreHomePage() {
       <footer className={styles.footer}>
         <div className={`${styles.shell} ${styles.footerMain}`}>
           <a href="#top">
-            <Brand />
+            <Brand compact />
           </a>
           <nav aria-label="頁尾導覽">
             <a href="#about">關於我們</a>
-            <a href="#how">使用說明</a>
-            <a href="#support">支援中心</a>
+            <Link href="/help">使用說明</Link>
+            <Link href="/support">支援中心</Link>
             <Link href="/terms">服務條款</Link>
             <Link href="/privacy">隱私政策</Link>
           </nav>

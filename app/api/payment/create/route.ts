@@ -32,6 +32,10 @@ import {
   enqueueOrderInvoiceOutbox,
   processOrderInvoiceOutbox,
 } from '@/lib/subscription/outbox'
+import {
+  GENERAL_EMAIL_CONSENT_VERSION,
+  MARKETING_EMAIL_CONSENT_VERSION,
+} from '@/lib/email-consent'
 
 const GUEST_SOURCE = 'checkout_email'
 
@@ -288,6 +292,7 @@ export async function POST(request: NextRequest) {
                     action: 'GRANTED' as const,
                     source: 'checkout',
                     ip: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || request.headers.get('cf-connecting-ip') || 'unknown',
+                    termsVersion: GENERAL_EMAIL_CONSENT_VERSION,
                   }]
                 : []),
               ...(marketingConsent
@@ -298,6 +303,7 @@ export async function POST(request: NextRequest) {
                     action: 'GRANTED' as const,
                     source: 'checkout',
                     ip: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || request.headers.get('cf-connecting-ip') || 'unknown',
+                    termsVersion: MARKETING_EMAIL_CONSENT_VERSION,
                   }]
                 : []),
             ],
@@ -324,6 +330,7 @@ export async function POST(request: NextRequest) {
                   action: generalEmailConsent ? 'GRANTED' : 'REVOKED',
                   source: 'checkout',
                   ip: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || request.headers.get('cf-connecting-ip') || 'unknown',
+                  termsVersion: GENERAL_EMAIL_CONSENT_VERSION,
                 },
                 {
                   email: normalizedEmail,
@@ -331,6 +338,7 @@ export async function POST(request: NextRequest) {
                   action: marketingConsent ? 'GRANTED' : 'REVOKED',
                   source: 'checkout',
                   ip: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || request.headers.get('cf-connecting-ip') || 'unknown',
+                  termsVersion: MARKETING_EMAIL_CONSENT_VERSION,
                 },
               ],
             },
@@ -385,6 +393,7 @@ export async function POST(request: NextRequest) {
                   action: 'GRANTED',
                   source: 'checkout',
                   ip: ipAddress,
+                  termsVersion: GENERAL_EMAIL_CONSENT_VERSION,
                 },
               }),
             ]
@@ -399,6 +408,7 @@ export async function POST(request: NextRequest) {
                   action: 'GRANTED',
                   source: 'checkout',
                   ip: ipAddress,
+                  termsVersion: MARKETING_EMAIL_CONSENT_VERSION,
                 },
               }),
             ]

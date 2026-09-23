@@ -3,8 +3,8 @@ import { ForgotPasswordForm } from '@/components/forms/forgot-password-form'
 import { AuthPageWrapper } from '@/components/auth/auth-page-wrapper'
 
 export const metadata: Metadata = {
-  title: '忘記密碼 | 課程平台',
-  description: '重設您的密碼',
+  title: '忘記密碼 | BestAppStore',
+  description: '重設您的 BestAppStore 會員密碼',
 }
 
 export default function ForgotPasswordPage() {

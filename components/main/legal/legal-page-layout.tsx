@@ -1,38 +1,64 @@
-// components/main/legal/legal-page-layout.tsx
-// 法律頁面共用 Layout
-// 統一的標題、最後更新日期、內容區域樣式
-
-import { ReactNode } from 'react'
+import Link from 'next/link'
+import type { ReactNode } from 'react'
+import { ArrowUpRight } from 'lucide-react'
+import { BestAppStoreBrand } from '@/components/shared/bestappstore-brand'
+import styles from './legal-page-layout.module.css'
 
 interface LegalPageLayoutProps {
   title: string
-  lastUpdated: string
+  lastUpdated?: string
+  eyebrow?: string
+  description?: string
   children: ReactNode
 }
 
 export function LegalPageLayout({
   title,
   lastUpdated,
+  eyebrow = 'BESTAPPSTORE · LEGAL',
+  description = '我們重視每一次使用體驗，也用清楚透明的方式說明服務與資料處理原則。',
   children,
 }: LegalPageLayoutProps) {
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header 區域 */}
-      <div className="border-b border-white/10 bg-[#1C1C1E]">
-        <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
-          <h1 className="text-3xl font-bold text-white sm:text-4xl">{title}</h1>
-          <p className="mt-4 text-sm text-[#EBEBF5]/60">
-            最後更新日期：{lastUpdated}
-          </p>
+    <div className={styles.page}>
+      <header className={styles.header}>
+        <div className={`${styles.shell} ${styles.navbar}`}>
+          <Link href="/" className={styles.brandLink}><BestAppStoreBrand /></Link>
+          <nav className={styles.navigation} aria-label="網站導覽">
+            <Link href="/">回到首頁</Link>
+            <Link href="/lumi-series">Lumi Series</Link>
+            <Link className={styles.loginLink} href="/login">會員登入</Link>
+          </nav>
         </div>
-      </div>
-
-      {/* 內容區域 */}
-      <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
-        <article className="prose prose-invert max-w-none prose-headings:text-white prose-headings:font-semibold prose-h2:text-2xl prose-h2:mt-10 prose-h2:mb-4 prose-h3:text-xl prose-h3:mt-8 prose-h3:mb-3 prose-p:text-[#EBEBF5]/80 prose-p:leading-relaxed prose-li:text-[#EBEBF5]/80 prose-li:marker:text-[#007AFF] prose-strong:text-white prose-a:text-[#007AFF] prose-a:no-underline hover:prose-a:underline">
-          {children}
-        </article>
-      </div>
+      </header>
+      <main>
+        <section className={styles.hero}>
+          <div className={`${styles.shell} ${styles.heroInner}`}>
+            <div>
+              <span className={styles.eyebrow}>{eyebrow}</span>
+              <h1>{title}</h1>
+              <p>{description}</p>
+            </div>
+            {lastUpdated && <span className={styles.updated}>最後更新：{lastUpdated}</span>}
+          </div>
+        </section>
+        <section className={styles.contentSection}>
+          <div className={styles.contentShell}><article className={styles.content}>{children}</article></div>
+        </section>
+      </main>
+      <footer className={styles.footer}>
+        <div className={`${styles.shell} ${styles.footerMain}`}>
+          <div><BestAppStoreBrand compact /><p>好的選擇，值得更好的體驗。</p></div>
+          <nav aria-label="頁尾導覽">
+            <Link href="/help">使用說明</Link>
+            <Link href="/support">支援中心</Link>
+            <Link href="/terms">服務條款</Link>
+            <Link href="/privacy">隱私權政策</Link>
+            <Link href="/lumi-series">探索 Lumi Series <ArrowUpRight size={14} /></Link>
+          </nav>
+        </div>
+        <div className={`${styles.shell} ${styles.copyright}`}>© {new Date().getFullYear()} BestAppStore. All rights reserved.</div>
+      </footer>
     </div>
   )
 }

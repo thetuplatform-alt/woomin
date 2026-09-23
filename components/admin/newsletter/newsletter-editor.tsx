@@ -642,7 +642,7 @@ export function NewsletterEditor({
                           className="h-9"
                           value={senderForm.footerName}
                           onChange={(event) => setSenderForm((current) => ({ ...current, footerName: event.target.value }))}
-                          placeholder="例如：WooMin"
+                          placeholder="例如：BestAppStore"
                         />
                       </div>
                       <div className="space-y-1">
@@ -651,7 +651,7 @@ export function NewsletterEditor({
                           className="h-9"
                           value={senderForm.footerEmail}
                           onChange={(event) => setSenderForm((current) => ({ ...current, footerEmail: event.target.value }))}
-                          placeholder="support@example.com"
+                          placeholder="service@bestappstore.co.uk"
                         />
                       </div>
                       <Button variant="outline" size="sm" onClick={handleSenderSave} disabled={isSenderSaving || isChecklistLoading} className="w-full">

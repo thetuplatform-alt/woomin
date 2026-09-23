@@ -9,7 +9,6 @@ import { Toaster } from '@/components/ui/sonner'
 import { getPublicSiteSettings } from '@/lib/site-settings-public'
 import { getAnalyticsSettings } from '@/lib/analytics-settings'
 import { resolveAppUrl } from '@/lib/app-url'
-import { resolveSiteIconPath } from '@/lib/site-brand-assets'
 import { PostHogInitializer } from '@/components/common/posthog-initializer'
 import '@blocknote/core/fonts/inter.css'
 import '@mantine/core/styles.css'
@@ -34,32 +33,31 @@ export async function generateMetadata(): Promise<Metadata> {
   const appUrl = await resolveAppUrl()
   const {
     siteName,
-    siteLogo,
     shareTitle,
     shareDescription,
     shareLogo,
     shareImage,
   } = await getPublicSiteSettings()
-  const title = shareTitle || siteName || '線上課程平台'
-  const description = shareDescription || '一個可自訂品牌與課程內容的線上課程平台。'
-  const siteIcon = resolveSiteIconPath(siteLogo, appUrl)
-  const image = shareImage || shareLogo || siteIcon || ''
+  const title = shareTitle || siteName || 'BestAppStore'
+  const description =
+    shareDescription || '整合數位應用、專業服務與精選內容的多系列會員服務平台。'
+  const image = shareImage || shareLogo || ''
 
   return {
     metadataBase: new URL(appUrl),
     title: {
-      default: siteName || '線上課程平台',
-      template: `%s | ${siteName || '線上課程平台'}`,
+      default: siteName || 'BestAppStore',
+      template: `%s | ${siteName || 'BestAppStore'}`,
     },
     description,
-    keywords: ['線上課程', '課程平台', '教學平台'],
-    authors: [{ name: siteName || 'WooMin' }],
-    creator: siteName || 'WooMin',
+    keywords: ['BestAppStore', '數位服務', '會員服務', '數位應用', '專業服務'],
+    authors: [{ name: siteName || 'BestAppStore' }],
+    creator: siteName || 'BestAppStore',
     openGraph: {
       type: 'website',
       locale: 'zh_TW',
       url: appUrl,
-      siteName: siteName || '線上課程平台',
+      siteName: siteName || 'BestAppStore',
       title,
       description,
       images: image
@@ -80,9 +78,17 @@ export async function generateMetadata(): Promise<Metadata> {
       images: image ? [image] : undefined,
     },
     icons: {
-      icon: siteIcon,
-      shortcut: siteIcon,
-      apple: siteIcon,
+      icon: [
+        { url: '/favicon-16.png', sizes: '16x16', type: 'image/png' },
+        { url: '/favicon-32.png', sizes: '32x32', type: 'image/png' },
+        { url: '/favicon-48.png', sizes: '48x48', type: 'image/png' },
+      ],
+      shortcut: '/favicon.ico',
+      apple: {
+        url: '/apple-touch-icon.png',
+        sizes: '180x180',
+        type: 'image/png',
+      },
     },
     robots: {
       index: true,

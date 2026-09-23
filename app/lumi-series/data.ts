@@ -9,7 +9,7 @@ export const lumiCategoryIds = [
 
 export type LumiCategoryId = (typeof lumiCategoryIds)[number]
 export type LumiProductCategory = Exclude<LumiCategoryId, 'all' | 'skills'>
-export type LumiPricingType = 'free' | 'free_trial' | 'paid' | 'coming_soon'
+export type LumiPricingType = 'free' | 'free_trial' | 'paid' | 'included' | 'coming_soon'
 export type LumiProductStatus = 'available' | 'coming_soon'
 
 export type LumiProduct = {
@@ -17,13 +17,14 @@ export type LumiProduct = {
   slug: string
   name: string
   eyebrow?: string
-  type: 'Web App' | 'AI Skill'
+  type: 'Web App' | 'AI Skill' | 'AI Tool' | 'SaaS'
   category: LumiProductCategory
   subCategory?: string
   shortDescription: string
   longDescription: string
   tags: string[]
   thumbnail: string
+  heroImage?: string
   pricingType: LumiPricingType
   price: number | null
   currency: 'USD' | 'TWD' | null
@@ -32,11 +33,14 @@ export type LumiProduct = {
   ctaLabel: string
   ctaUrl: string
   featured: boolean
+  featuredOrder?: number | null
   sortOrder: number
   audience: string[]
   benefits: string[]
   features: { title: string; description: string }[]
   usageSteps: string[]
+  runtimeType?: 'EXTERNAL_WEB_APP' | 'SKILL_RUNTIME' | 'BESTAPPSTORE_NATIVE'
+  requiredEntitlementCode?: string | null
 }
 
 export const lumiCategories: Record<
@@ -363,6 +367,7 @@ export function getLumiProduct(slug: string) {
 export function formatLumiPricing(product: LumiProduct) {
   if (product.pricingType === 'free') return '免費使用'
   if (product.pricingType === 'coming_soon') return '即將推出'
+  if (product.pricingType === 'included') return '會員服務'
   if (product.pricingType === 'paid' && product.price && product.currency) {
     return `${product.currency === 'USD' ? 'US$' : 'NT$'}${product.price}`
   }

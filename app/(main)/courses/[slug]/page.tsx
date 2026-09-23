@@ -128,7 +128,7 @@ export async function generateMetadata({
       type: 'website',
       locale: 'zh_TW',
       url: courseUrl,
-      siteName: `${siteName} 課程平台`,
+      siteName,
       title: ogTitle,
       description: ogDescription,
       images: ogImage

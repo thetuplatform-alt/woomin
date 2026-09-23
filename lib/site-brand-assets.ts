@@ -1,5 +1,11 @@
-export const DEFAULT_SITE_ICON_PATH = '/icon.svg'
+export const DEFAULT_SITE_ICON_PATH = '/bestappstore-icon.png'
 export const LEGACY_SITE_ICON_PATH = '/icon.png'
+export const LEGACY_SITE_ICON_SVG_PATH = '/icon.svg'
+
+const LEGACY_SITE_ICON_PATHS = [
+  LEGACY_SITE_ICON_PATH,
+  LEGACY_SITE_ICON_SVG_PATH,
+] as const
 
 const ABSOLUTE_HTTP_URL_PATTERN = /^https?:\/\//i
 
@@ -12,7 +18,7 @@ function normalizeOrigin(value: string): string | null {
 }
 
 function isLegacySiteIconPath(value: string, appUrl?: string | null): boolean {
-  if (value === LEGACY_SITE_ICON_PATH) {
+  if (LEGACY_SITE_ICON_PATHS.some((path) => value === path)) {
     return true
   }
 
@@ -25,7 +31,7 @@ function isLegacySiteIconPath(value: string, appUrl?: string | null): boolean {
     const siteOrigin = normalizeOrigin(appUrl)
     return Boolean(siteOrigin) &&
       iconUrl.origin === siteOrigin &&
-      iconUrl.pathname === LEGACY_SITE_ICON_PATH
+      LEGACY_SITE_ICON_PATHS.some((path) => iconUrl.pathname === path)
   } catch {
     return false
   }

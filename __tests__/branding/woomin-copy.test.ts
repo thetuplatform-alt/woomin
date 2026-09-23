@@ -17,12 +17,14 @@ function readUserFacingSource(): string {
 
   for (const root of userFacingRoots) collect(path.join(sourceRoot, root))
   return files
-    .filter((file) => !file.endsWith('/lib/site-brand.ts'))
+    .filter(
+      (file) => path.relative(sourceRoot, file).split(path.sep).join('/') !== 'lib/site-brand.ts'
+    )
     .map((file) => fs.readFileSync(file, 'utf8'))
     .join('\n')
 }
 
-describe('WooMin 對外文字', () => {
+describe('BestAppStore 對外文字', () => {
   it('不應在前台或後台程式碼留下舊品牌、Ray 或舊網址', () => {
     const source = readUserFacingSource()
 
@@ -31,10 +33,10 @@ describe('WooMin 對外文字', () => {
     expect(source).not.toContain('noreply@ray')
   })
 
-  it('保留 WooMin 與 Fish 的必要對外文字', () => {
+  it('保留 BestAppStore 與 Fish 的必要對外文字', () => {
     const source = readUserFacingSource()
 
-    expect(source).toContain('WooMin')
+    expect(source).toContain('BestAppStore')
     expect(source).toContain('Fish')
     expect(source).toContain('fish@fishot.com')
   })

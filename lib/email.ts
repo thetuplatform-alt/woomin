@@ -71,7 +71,7 @@ async function getSenderName(): Promise<string> {
     return getDisplaySiteName(setting?.value || siteName?.value)
   } catch (error) {
     console.error('取得發送者名稱失敗:', error)
-    return 'WooMin'
+    return 'BestAppStore'
   }
 }
 
@@ -86,14 +86,14 @@ async function getEmailBranding(): Promise<EmailBranding> {
 
     return {
       siteName: getDisplaySiteName(siteName?.value),
-      siteLogo: resolveAssetUrl(siteLogo?.value, appUrl) || `${appUrl}/icon.png`,
+      siteLogo: resolveAssetUrl(siteLogo?.value, appUrl) || `${appUrl}/bestappstore-logo.png`,
       appUrl,
     }
   } catch {
     const appUrl = await resolveAppUrl()
     return {
-      siteName: 'WooMin',
-      siteLogo: `${appUrl}/icon.png`,
+      siteName: 'BestAppStore',
+      siteLogo: `${appUrl}/bestappstore-logo.png`,
       appUrl,
     }
   }
@@ -587,9 +587,9 @@ async function getContactEmail(): Promise<string | null> {
     const setting = await prisma.siteSetting.findUnique({
       where: { key: SETTING_KEYS.CONTACT_EMAIL },
     })
-    return setting?.value || null
+    return setting?.value || 'service@bestappstore.co.uk'
   } catch {
-    return null
+    return 'service@bestappstore.co.uk'
   }
 }
 

@@ -13,6 +13,11 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { registerUser } from '@/lib/actions/auth'
 import { Loader2 } from 'lucide-react'
 import { trackMetaPixelEvent } from '@/components/common/meta-pixel-events'
+import {
+  GENERAL_EMAIL_CONSENT_TEXT,
+  MARKETING_EMAIL_CONSENT_TEXT,
+  REQUIRED_SERVICE_NOTICE_TEXT,
+} from '@/lib/email-consent'
 
 // 初始狀態
 const initialState: { error?: string; success?: boolean } = {}
@@ -134,13 +139,16 @@ export function RegisterForm({ callbackUrl }: RegisterFormProps) {
           </p>
 
           <div className="space-y-3 rounded-lg border border-divider bg-surface p-3">
+            <p className="text-xs leading-relaxed text-caption">
+              {REQUIRED_SERVICE_NOTICE_TEXT}
+            </p>
             <label className="flex items-start gap-3 text-sm text-body">
               <Checkbox name="generalEmailConsent" className="mt-0.5" />
-              <span>接收學習資源電子報、開課公告與平台內容更新。</span>
+              <span>{GENERAL_EMAIL_CONSENT_TEXT}</span>
             </label>
             <label className="flex items-start gap-3 text-sm text-body">
               <Checkbox name="marketingConsent" className="mt-0.5" />
-              <span>我明確同意接收課程促銷、優惠碼與限時活動電子報（可隨時退訂）。</span>
+              <span>{MARKETING_EMAIL_CONSENT_TEXT}</span>
             </label>
           </div>
 

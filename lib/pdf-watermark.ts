@@ -76,14 +76,14 @@ async function getSiteWatermarkSettings(): Promise<SiteWatermarkSettings> {
 
     return {
       siteName: getDisplaySiteName(map.get(SETTING_KEYS.SITE_NAME)),
-      siteLogo: map.get(SETTING_KEYS.SITE_LOGO) || '/icon.png',
+      siteLogo: map.get(SETTING_KEYS.SITE_LOGO) || '/bestappstore-logo.png',
       siteUrl: resolveWatermarkSiteUrl(map.get(SETTING_KEYS.SITE_URL), appUrl),
     }
   } catch {
     const appUrl = await resolveAppUrl()
     return {
-      siteName: 'WooMin',
-      siteLogo: '/icon.png',
+      siteName: 'BestAppStore',
+      siteLogo: '/bestappstore-logo.png',
       siteUrl: appUrl,
     }
   }
@@ -92,9 +92,9 @@ async function getSiteWatermarkSettings(): Promise<SiteWatermarkSettings> {
 async function readLogoBytes(logoUrl: string): Promise<Buffer | null> {
   if (!logoUrl) return null
 
-  if (logoUrl.startsWith('/icon.png')) {
+  if (logoUrl.startsWith('/bestappstore-logo.png')) {
     try {
-      return await fs.readFile(path.join(process.cwd(), 'public', 'icon.png'))
+      return await fs.readFile(path.join(process.cwd(), 'public', 'bestappstore-logo.png'))
     } catch {
       return null
     }

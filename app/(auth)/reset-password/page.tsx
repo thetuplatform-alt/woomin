@@ -4,8 +4,8 @@ import { ResetPasswordForm } from '@/components/forms/reset-password-form'
 import { AuthPageWrapper } from '@/components/auth/auth-page-wrapper'
 
 export const metadata: Metadata = {
-  title: '重設密碼 | 課程平台',
-  description: '設定您的新密碼',
+  title: '重設密碼 | BestAppStore',
+  description: '設定新的 BestAppStore 會員密碼',
 }
 
 interface ResetPasswordPageProps {

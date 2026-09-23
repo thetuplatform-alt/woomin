@@ -41,6 +41,7 @@ jest.mock('@/lib/newsletter/audience', () => ({
 const mockAssertEmailConsent = jest.fn()
 jest.mock('@/lib/newsletter/consent', () => ({
   assertEmailConsent: mockAssertEmailConsent,
+  assertBestAppStoreEmailConsent: mockAssertEmailConsent,
   createUnsubscribeToken: jest.fn(),
 }))
 

@@ -204,7 +204,7 @@ export function MainHeader({
                         className="flex cursor-pointer items-center rounded-xl px-3 py-2.5 text-sm font-medium text-body outline-none transition-colors hover:bg-surface hover:text-heading focus:bg-surface"
                       >
                         <User className="mr-3 h-4 w-4 text-caption" />
-                        我的學習中心
+                        我的服務
                       </Link>
                     </DropdownMenuItem>
 
@@ -245,7 +245,7 @@ export function MainHeader({
                 asChild
                 className="rounded-full bg-heading px-6 text-sm font-semibold text-white transition-all hover:bg-[#262626] hover:scale-[1.02] active:scale-[0.98]"
               >
-                <Link href="/login">開始學習</Link>
+                <Link href="/login">進入服務</Link>
               </Button>
             )}
           </div>
@@ -428,7 +428,7 @@ export function MainHeader({
                         >
                           <Link href="/my-courses">
                             <User className="mr-3 h-5 w-5 text-caption" />
-                            我的學習中心
+                            我的服務
                           </Link>
                         </Button>
                         {canAccessAdmin && (

@@ -6,7 +6,7 @@ import { Metadata } from 'next'
 import { SuccessClient } from './success-client'
 
 export const metadata: Metadata = {
-  title: '付款成功 | 課程平台',
+  title: '付款成功 | BestAppStore',
   description: '恭喜您完成購買！',
 }
 

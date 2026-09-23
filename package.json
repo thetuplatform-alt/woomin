@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "admin:init": "npx tsx scripts/init-admin.ts",
+    "seed:bestappstore": "npx tsx scripts/seed-bestappstore.ts",
     "verify:phase1-local-storage": "npx tsx scripts/verify-phase1-local-storage.ts",
     "verify:phase1-media-upload-route": "npx tsx scripts/verify-phase1-media-upload-route.ts",
     "verify:phase1-public-upload-route": "npx tsx scripts/verify-phase1-public-upload-route.ts",

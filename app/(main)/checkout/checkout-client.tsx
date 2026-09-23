@@ -16,6 +16,11 @@ import {
   checkoutInvoiceSchema,
   type CheckoutInvoiceType,
 } from "@/lib/validations/einvoice";
+import {
+  GENERAL_EMAIL_CONSENT_TEXT,
+  MARKETING_EMAIL_CONSENT_TEXT,
+  REQUIRED_SERVICE_NOTICE_TEXT,
+} from "@/lib/email-consent";
 
 interface CheckoutClientProps {
   productType?: "course" | "bundle";
@@ -355,6 +360,7 @@ export function CheckoutClient({
             ? { couponCode: appliedCoupon.code }
             : {}),
           ...(invoicePayload ? { invoice: invoicePayload } : {}),
+          agreedTerms,
           generalEmailConsent,
           marketingConsent,
           // 訂閱方案與自動扣款同意（AC-22）
@@ -741,30 +747,36 @@ export function CheckoutClient({
             </label>
           )}
 
-          <div className="mt-3 space-y-3 rounded-xl border border-divider bg-white p-4">
-            <label className="flex cursor-pointer items-start gap-3">
-              <input
-                type="checkbox"
-                checked={generalEmailConsent}
-                onChange={(e) => setGeneralEmailConsent(e.target.checked)}
-                className="mt-0.5 h-4 w-4 cursor-pointer accent-cta"
-              />
-              <span className="text-sm leading-relaxed text-body">
-                接收學習資源電子報、課程更新與開課公告。
-              </span>
-            </label>
-            <label className="flex cursor-pointer items-start gap-3">
-              <input
-                type="checkbox"
-                checked={marketingConsent}
-                onChange={(e) => setMarketingConsent(e.target.checked)}
-                className="mt-0.5 h-4 w-4 cursor-pointer accent-cta"
-              />
-              <span className="text-sm leading-relaxed text-body">
-                我明確同意接收課程促銷、優惠碼與限時活動電子報（可隨時退訂）。
-              </span>
-            </label>
-          </div>
+          <p className="mt-3 text-xs leading-relaxed text-caption">
+            {REQUIRED_SERVICE_NOTICE_TEXT}
+          </p>
+
+          {!isSubscription && (
+            <div className="mt-3 space-y-3 rounded-xl border border-divider bg-white p-4">
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={generalEmailConsent}
+                  onChange={(e) => setGeneralEmailConsent(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 cursor-pointer accent-cta"
+                />
+                <span className="text-sm leading-relaxed text-body">
+                  {GENERAL_EMAIL_CONSENT_TEXT}
+                </span>
+              </label>
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={marketingConsent}
+                  onChange={(e) => setMarketingConsent(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 cursor-pointer accent-cta"
+                />
+                <span className="text-sm leading-relaxed text-body">
+                  {MARKETING_EMAIL_CONSENT_TEXT}
+                </span>
+              </label>
+            </div>
+          )}
 
           {/* 訂閱模式未登入：顯示登入引導（OAuth callbackUrl 保留 plan 參數，AC-24） */}
           {isSubscription && !user.isLoggedIn ? (

@@ -66,7 +66,7 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: "/icon.svg",
+        source: "/bestappstore-icon.png",
         headers: [
           {
             key: "Cache-Control",

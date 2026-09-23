@@ -94,7 +94,7 @@ export function LegalTemplateDialog({
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="space-y-2">
-            <Label htmlFor="legal-template-site-name">課程平台名稱</Label>
+            <Label htmlFor="legal-template-site-name">服務平台名稱</Label>
             <Input
               id="legal-template-site-name"
               value={siteName}
@@ -109,7 +109,7 @@ export function LegalTemplateDialog({
               type="email"
               value={contactEmail}
               onChange={(e) => setContactEmail(e.target.value)}
-              placeholder="例如：support@example.com"
+              placeholder="例如：service@bestappstore.co.uk"
             />
           </div>
         </div>

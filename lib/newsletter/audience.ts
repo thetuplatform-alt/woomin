@@ -1,6 +1,6 @@
 import type { Prisma, NewsletterType, UserRole } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
-import { assertEmailConsent, maskEmail } from '@/lib/newsletter/consent'
+import { assertBestAppStoreEmailConsent, maskEmail } from '@/lib/newsletter/consent'
 import type { AudienceEstimate, SegmentAudienceItem, SegmentJson } from '@/lib/newsletter/types'
 
 type AudienceUser = {
@@ -232,36 +232,10 @@ export async function getAudienceUsers(params: {
 
 async function resolveAudienceConsent(user: AudienceUser, consentType: 'general' | 'marketing') {
   if (!user.id || user.isExternal) {
-    return assertEmailConsent(null, consentType, user.email)
+    return assertBestAppStoreEmailConsent(null, consentType, user.email)
   }
 
-  if (user.emailBounceState === 'HARD_BOUNCED' || user.emailBounceState === 'COMPLAINED') {
-    return { allowed: false, reason: 'email_invalid_or_complained' }
-  }
-  if (
-    user.emailBounceState === 'SOFT_SUSPENDED' &&
-    user.emailInvalidAt &&
-    user.emailInvalidAt.getTime() > Date.now()
-  ) {
-    return { allowed: false, reason: 'soft_bounce_suspended' }
-  }
-  if (user.emailInvalidAt && user.emailBounceState !== 'SOFT_SUSPENDED') {
-    return { allowed: false, reason: 'email_invalid_or_complained' }
-  }
-  if (user.unsubscribedAt) return { allowed: false, reason: 'unsubscribed_all' }
-
-  if (consentType === 'general') {
-    if (user.country === 'HK' && user.generalEmailConsent !== true) {
-      return { allowed: false, reason: 'hk_general_requires_opt_in' }
-    }
-    return user.generalEmailConsent === true
-      ? { allowed: true }
-      : { allowed: false, reason: 'general_unsubscribed' }
-  }
-
-  return user.marketingConsent === true
-    ? { allowed: true }
-    : { allowed: false, reason: 'marketing_consent_missing' }
+  return assertBestAppStoreEmailConsent(user.id, consentType, user.email)
 }
 
 export async function estimateAudience(params: {

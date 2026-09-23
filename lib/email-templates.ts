@@ -39,7 +39,7 @@ function normalizeEmailAppUrl(value?: string): string {
 }
 
 function normalizeEmailAssetUrl(value: string | undefined, appUrl: string): string {
-  if (!value) return `${appUrl}/icon.png`
+  if (!value) return `${appUrl}/bestappstore-logo.png`
   try {
     const url = new URL(value)
     if (INTERNAL_EMAIL_HOSTS.has(url.hostname.toLowerCase())) {
@@ -54,7 +54,7 @@ function normalizeEmailAssetUrl(value: string | undefined, appUrl: string): stri
 function getEmailBranding(branding?: Partial<EmailBranding>): EmailBranding {
   const appUrl = normalizeEmailAppUrl(branding?.appUrl)
   return {
-    siteName: branding?.siteName || 'WooMin',
+    siteName: branding?.siteName || 'BestAppStore',
     siteLogo: normalizeEmailAssetUrl(branding?.siteLogo, appUrl),
     appUrl,
   }
@@ -85,7 +85,7 @@ const headerStyles = `
 
 function getLogoHtml(branding?: Partial<EmailBranding>): string {
   const resolved = getEmailBranding(branding)
-  return `<img src="${resolved.siteLogo}" alt="${resolved.siteName}" width="50" height="50" style="border-radius: 12px; margin-bottom: 10px; display: inline-block;" />`
+  return `<img src="${resolved.siteLogo}" alt="${resolved.siteName}" style="max-width: 180px; max-height: 60px; width: auto; height: auto; margin-bottom: 10px; display: inline-block;" />`
 }
 
 const buttonStyles = `
@@ -418,7 +418,7 @@ export function accountInviteTemplate(
       )}</strong>。`
     )
   } else {
-    introLines.push(`您已被加入 ${escapeHtml(resolved.siteName)} 線上課程平台。`)
+    introLines.push(`您已被加入 ${escapeHtml(resolved.siteName)} 會員服務平台。`)
   }
   introLines.push('請點擊下方按鈕設定您的初始密碼，即可登入並開始使用。')
 

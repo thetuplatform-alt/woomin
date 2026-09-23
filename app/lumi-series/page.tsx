@@ -11,16 +11,17 @@ import {
   Shapes,
   Sparkles,
 } from 'lucide-react'
+import { BestAppStoreMemberMenu, type BestAppStoreHeaderUser } from '@/components/shared/bestappstore-member-menu'
+import { BestAppStoreBrand } from '@/components/shared/bestappstore-brand'
+import { requireSeriesEntitlement } from '@/lib/entitlement-guard'
+import { listPublishedLumiTools } from '@/lib/lumi-tools'
 import { LumiCatalog, ProductCard } from './catalog'
-import { lumiCategories, lumiProducts } from './data'
 import styles from './lumi-series.module.css'
 
 export const metadata: Metadata = {
   title: { absolute: 'Lumi Series｜陪你工作、創作，也陪你過生活' },
   description: 'Lumi 把生活、幼教、創作與營運中常做、常卡住的事情，整理成可以直接使用的 Web Apps 與 AI Skills。',
 }
-
-const categoryOrder = ['life', 'kids', 'creator', 'business'] as const
 
 const whyLumi = [
   { Icon: Shapes, title: '多元應用', description: '生活、幼教、創作、商業一次滿足。' },
@@ -29,37 +30,38 @@ const whyLumi = [
   { Icon: HeartHandshake, title: '陪伴感', description: '不是冷冰冰的工具，而是陪你把事情做完的助手。' },
 ] as const
 
-function BestAppStoreBrand() {
+function LumiSeriesBrand({ compact = false }: { compact?: boolean }) {
   return (
-    <span className={styles.brandLockup} aria-label="BestAppStore｜Lumi Series">
-      <span className={styles.brandFallback} aria-hidden="true">B</span>
-      <strong>BestAppStore</strong>
+    <span className={`${styles.brandLockup} ${compact ? styles.brandLockupCompact : ''}`} aria-label="BestAppStore｜Lumi Series">
+      <BestAppStoreBrand compact={compact} className={compact ? styles.lumiBestAppStoreBrandCompact : styles.lumiBestAppStoreBrand} />
       <i aria-hidden="true" />
       <span>Lumi Series</span>
     </span>
   )
 }
 
-function Header() {
+function Header({ user }: { user: BestAppStoreHeaderUser | null }) {
   return (
     <header className={styles.header}>
       <div className={`${styles.shell} ${styles.navbar}`}>
-        <Link href="/lumi-series"><BestAppStoreBrand /></Link>
+        <Link href="/lumi-series"><LumiSeriesBrand /></Link>
         <nav className={styles.desktopNav} aria-label="Lumi Series 主要導覽">
           <a href="#featured">精選推薦</a>
           <a href="#explore">探索 Lumi</a>
           <a href="#how">如何使用</a>
-          <Link href="/login">會員登入</Link>
+          <BestAppStoreMemberMenu user={user} />
         </nav>
-        <details className={styles.mobileNav}>
-          <summary aria-label="開啟導覽選單"><Menu size={20} /><span>選單</span></summary>
-          <nav aria-label="Lumi Series 行動版導覽">
-            <a href="#featured">精選推薦</a>
-            <a href="#explore">探索 Lumi</a>
-            <a href="#how">如何使用</a>
-            <Link href="/login">會員登入</Link>
-          </nav>
-        </details>
+        <div className={styles.mobileHeaderActions}>
+          <BestAppStoreMemberMenu compact user={user} />
+          <details className={styles.mobileNav}>
+            <summary aria-label="開啟導覽選單"><Menu size={20} /><span>選單</span></summary>
+            <nav aria-label="Lumi Series 行動版導覽">
+              <a href="#featured">精選推薦</a>
+              <a href="#explore">探索 Lumi</a>
+              <a href="#how">如何使用</a>
+            </nav>
+          </details>
+        </div>
       </div>
     </header>
   )
@@ -70,12 +72,14 @@ function Footer() {
     <footer className={styles.footer}>
       <div className={`${styles.shell} ${styles.footerGrid}`}>
         <div>
-          <BestAppStoreBrand />
+          <LumiSeriesBrand compact />
           <p>陪你工作、創作，也陪你過生活。</p>
         </div>
         <nav aria-label="頁尾導覽">
           <Link href="/">BestAppStore 首頁</Link>
           <a href="#explore">所有工具</a>
+          <Link href="/help">使用說明</Link>
+          <Link href="/support">支援中心</Link>
           <Link href="/terms">服務條款</Link>
           <Link href="/privacy">隱私政策</Link>
         </nav>
@@ -85,12 +89,20 @@ function Footer() {
   )
 }
 
-export default function LumiSeriesPage() {
-  const featuredProducts = lumiProducts.filter((product) => product.featured)
+export default async function LumiSeriesPage() {
+  const headerUser = await requireSeriesEntitlement('LUMI_SERIES', '/lumi-series')
+  const products = await listPublishedLumiTools()
+  const featuredProducts = products
+    .filter((product) => product.featured)
+    .sort((a, b) =>
+      (a.featuredOrder ?? Number.MAX_SAFE_INTEGER) -
+      (b.featuredOrder ?? Number.MAX_SAFE_INTEGER) ||
+      a.sortOrder - b.sortOrder
+    )
 
   return (
     <div className={styles.page} id="top">
-      <Header />
+      <Header user={headerUser} />
       <main>
         <section className={styles.hero}>
           <div className={styles.heroPhoto}>
@@ -106,29 +118,18 @@ export default function LumiSeriesPage() {
             <div className={styles.heroCopy}>
               <span className={styles.heroKicker}><Sparkles size={15} /> A GENTLER WAY TO GET THINGS DONE</span>
               <h1>Lumi Series</h1>
-              <h2>陪你工作、創作，<br />也陪你過生活。</h2>
+              <h2>
+                <span className={styles.heroHeadlineLine}>陪你工作、創作，</span>
+                <span className={styles.heroHeadlineLine}>也陪你過生活。</span>
+              </h2>
               <p>從生活選擇、幼教工作，到內容創作與團購營運，Lumi 把常做、常卡住的事情，整理成可以直接使用的 Web Apps 與 AI Skills。</p>
               <div className={styles.heroActions}>
                 <a className={styles.primaryButton} href="#explore">探索 Lumi<ArrowDown size={17} /></a>
                 <a className={styles.secondaryButton} href="#featured">看看精選推薦<ArrowRight size={17} /></a>
               </div>
             </div>
-            <div className={styles.heroLabels} aria-label="Lumi 應用範圍">
-              <span className={styles.labelOne}>工作效率</span>
-              <span className={styles.labelTwo}>創作靈感</span>
-              <span className={styles.labelThree}>生活便利</span>
-              <span className={styles.labelFour}>孩子成長</span>
-            </div>
           </div>
         </section>
-
-        <nav className={styles.categoryNav} aria-label="Lumi 產品分類">
-          <div className={styles.shell}>
-            <a href="#explore">全部</a>
-            {categoryOrder.map((id) => <a href={`#category-${id}`} key={id}>{lumiCategories[id].name}</a>)}
-            <a href="#explore">Lumi Skills</a>
-          </div>
-        </nav>
 
         <section className={styles.featuredSection} id="featured">
           <div className={styles.shell}>
@@ -143,27 +144,7 @@ export default function LumiSeriesPage() {
           </div>
         </section>
 
-        <LumiCatalog />
-
-        <section className={styles.categoryStories} aria-label="Lumi 應用系列">
-          <div className={styles.shell}>
-            {categoryOrder.map((id, index) => {
-              const category = lumiCategories[id]
-              const count = lumiProducts.filter((product) => product.category === id).length
-              return (
-                <article className={styles.categoryStory} id={`category-${id}`} key={id}>
-                  <span className={styles.categoryIndex}>0{index + 1}</span>
-                  <div>
-                    <span className={styles.eyebrow}>{category.label}</span>
-                    <h2>{category.name}</h2>
-                  </div>
-                  <p>{category.description}</p>
-                  <a href="#explore">查看 {count} 個工具<ArrowRight size={16} /></a>
-                </article>
-              )
-            })}
-          </div>
-        </section>
+        <LumiCatalog products={products} />
 
         <section className={styles.howSection} id="how">
           <div className={styles.shell}>

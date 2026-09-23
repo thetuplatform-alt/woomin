@@ -38,8 +38,8 @@ export const WELCOME_EMAIL_VARIABLES: WelcomeEmailVariable[] = [
   {
     token: '{{客服信箱}}',
     label: '客服信箱',
-    description: '站點客服信箱，未設定時使用 no-reply',
-    example: 'support@example.com',
+    description: '站點客服信箱，未設定時使用 BestAppStore 客服信箱',
+    example: 'service@bestappstore.co.uk',
   },
   {
     token: '{{購買日期}}',
@@ -69,7 +69,7 @@ export const DEFAULT_WELCOME_EMAIL_SUBJECT = '歡迎加入《{{課程名稱}}》
 
 export const DEFAULT_WELCOME_EMAIL_MARKDOWN = `嗨，{{用戶名稱}} 你好！
 
-我是課程平台團隊，先祝你一切順利。
+我是 BestAppStore 團隊，先祝你一切順利。
 
 感謝你購買 **{{課程名稱}}**，歡迎正式加入我們！
 
@@ -80,7 +80,7 @@ export const DEFAULT_WELCOME_EMAIL_MARKDOWN = `嗨，{{用戶名稱}} 你好！
 
 購買日期：{{購買日期}}
 
-課程平台團隊`
+BestAppStore 團隊`
 
 function replaceTokenAll(input: string, token: string, value: string): string {
   return input.split(token).join(value)
@@ -241,7 +241,7 @@ export async function buildWelcomeEmailContext(params: {
     userName: params.userName?.trim() || '學員',
     courseTitle: params.courseTitle,
     courseUrl: `${appUrl}/courses/${params.courseSlug}`,
-    supportEmail: params.supportEmail || process.env.EMAIL_FROM || 'noreply@example.com',
+    supportEmail: params.supportEmail || process.env.EMAIL_FROM || 'service@bestappstore.co.uk',
     purchaseDate: purchaseDate.toLocaleDateString('zh-TW', {
       timeZone: 'Asia/Taipei',
       year: 'numeric',

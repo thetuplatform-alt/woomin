@@ -1216,6 +1216,7 @@ export async function getEmailSettings(): Promise<{
   await requireOnlyAdminAuth()
 
   const keys = [
+    SETTING_KEYS.SITE_NAME,
     SETTING_KEYS.EMAIL_SENDER_NAME,
     SETTING_KEYS.EMAIL_FROM,
     SETTING_KEYS.EMAIL_PROVIDER,
@@ -1243,9 +1244,19 @@ export async function getEmailSettings(): Promise<{
   })
 
   const map = new Map(settings.map((s) => [s.key, s.value]))
+  const siteName = getDisplaySiteName(map.get(SETTING_KEYS.SITE_NAME))
+  const senderName = getDisplaySiteName(map.get(SETTING_KEYS.EMAIL_SENDER_NAME) || siteName)
+  const newsletterSenderName = getDisplaySiteName(
+    map.get(SETTING_KEYS.NEWSLETTER_SENDER_NAME) || senderName
+  )
+  const newsletterFooterName = getDisplaySiteName(
+    map.get(SETTING_KEYS.NEWSLETTER_FOOTER_NAME) || senderName
+  )
 
   const fromEmail =
     map.get(SETTING_KEYS.EMAIL_FROM) || process.env.EMAIL_FROM || 'noreply@example.com'
+  const supportEmail =
+    map.get(SETTING_KEYS.EMAIL_FROM) || process.env.EMAIL_FROM || 'service@bestappstore.co.uk'
   const resendApiKey = map.get(SETTING_KEYS.RESEND_API_KEY) || process.env.RESEND_API_KEY || ''
   const tosendApiKey = map.get(SETTING_KEYS.TOSEND_API_KEY) || process.env.TOSEND_API_KEY || ''
   const zsendApiKey = map.get(SETTING_KEYS.ZSEND_API_KEY) || process.env.ZSEND_API_KEY || ''
@@ -1289,7 +1300,7 @@ export async function getEmailSettings(): Promise<{
     tosendApiKeyHint: tosendApiKey ? maskSecret(tosendApiKey) : '',
     zsendApiKeyHint: zsendApiKey ? maskSecret(zsendApiKey) : '',
     zsendDomain,
-    senderName: map.get(SETTING_KEYS.EMAIL_SENDER_NAME) || 'WooMin',
+    senderName,
     fromEmail,
     isConfigured,
     emailProvider: provider,
@@ -1305,11 +1316,11 @@ export async function getEmailSettings(): Promise<{
       isConfigured: smtpIsConfigured,
     },
     newsletter: {
-      senderName: map.get(SETTING_KEYS.NEWSLETTER_SENDER_NAME) || map.get(SETTING_KEYS.EMAIL_SENDER_NAME) || 'WooMin',
-      replyTo: map.get(SETTING_KEYS.NEWSLETTER_REPLY_TO) || fromEmail,
-      footerName: map.get(SETTING_KEYS.NEWSLETTER_FOOTER_NAME) || map.get(SETTING_KEYS.EMAIL_SENDER_NAME) || 'WooMin',
+      senderName: newsletterSenderName,
+      replyTo: map.get(SETTING_KEYS.NEWSLETTER_REPLY_TO) || supportEmail,
+      footerName: newsletterFooterName,
       footerAddress: map.get(SETTING_KEYS.NEWSLETTER_FOOTER_ADDRESS) || '',
-      footerEmail: map.get(SETTING_KEYS.NEWSLETTER_FOOTER_EMAIL) || fromEmail,
+      footerEmail: map.get(SETTING_KEYS.NEWSLETTER_FOOTER_EMAIL) || supportEmail,
       ratePerMinute: map.get(SETTING_KEYS.NEWSLETTER_RATE_PER_MINUTE) || '60',
       lastCronHeartbeatAt: map.get(SETTING_KEYS.NEWSLETTER_LAST_CRON_HEARTBEAT_AT) || '',
       domainStatus: map.get(SETTING_KEYS.NEWSLETTER_DOMAIN_STATUS) || 'unchecked',
@@ -1602,8 +1613,8 @@ export async function getSettingsCompleteness(): Promise<{
     },
     {
       key: SETTING_KEYS.SITE_LOGO,
-      label: '站點 Logo（也作為 Icon）',
-      suggestion: '請上傳/填入 Logo URL，會同步成 favicon',
+      label: '自訂站點 Logo',
+      suggestion: '請上傳或填入站點 Logo URL；正式 favicon 由品牌 icon 資產提供',
     },
     {
       key: SETTING_KEYS.CONTACT_EMAIL,

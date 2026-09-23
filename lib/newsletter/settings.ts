@@ -45,18 +45,24 @@ export async function getNewsletterSettings(): Promise<NewsletterSettings> {
   const settings = await prisma.siteSetting.findMany({ where: { key: { in: keys } } })
   const map = new Map(settings.map((item) => [item.key, item.value]))
   const siteName = getDisplaySiteName(map.get(SETTING_KEYS.SITE_NAME))
+  const senderName = getDisplaySiteName(
+    map.get(SETTING_KEYS.NEWSLETTER_SENDER_NAME) || map.get(SETTING_KEYS.EMAIL_SENDER_NAME) || siteName
+  )
+  const footerName = getDisplaySiteName(
+    map.get(SETTING_KEYS.NEWSLETTER_FOOTER_NAME) || map.get(SETTING_KEYS.EMAIL_SENDER_NAME) || siteName
+  )
   const fromEmail = map.get(SETTING_KEYS.EMAIL_FROM) || process.env.EMAIL_FROM || 'noreply@example.com'
 
   return {
     siteName,
-    siteLogo: resolveAssetUrl(map.get(SETTING_KEYS.SITE_LOGO), appUrl) || `${appUrl}/icon.png`,
+    siteLogo: resolveAssetUrl(map.get(SETTING_KEYS.SITE_LOGO), appUrl) || `${appUrl}/bestappstore-logo.png`,
     appUrl,
-    senderName: map.get(SETTING_KEYS.NEWSLETTER_SENDER_NAME) || map.get(SETTING_KEYS.EMAIL_SENDER_NAME) || siteName,
+    senderName,
     fromEmail,
-    replyTo: map.get(SETTING_KEYS.NEWSLETTER_REPLY_TO) || fromEmail,
-    footerName: map.get(SETTING_KEYS.NEWSLETTER_FOOTER_NAME) || map.get(SETTING_KEYS.EMAIL_SENDER_NAME) || siteName,
+    replyTo: map.get(SETTING_KEYS.NEWSLETTER_REPLY_TO) || map.get(SETTING_KEYS.EMAIL_FROM) || process.env.EMAIL_FROM || 'service@bestappstore.co.uk',
+    footerName,
     footerAddress: map.get(SETTING_KEYS.NEWSLETTER_FOOTER_ADDRESS) || '',
-    footerEmail: map.get(SETTING_KEYS.NEWSLETTER_FOOTER_EMAIL) || fromEmail,
+    footerEmail: map.get(SETTING_KEYS.NEWSLETTER_FOOTER_EMAIL) || map.get(SETTING_KEYS.EMAIL_FROM) || process.env.EMAIL_FROM || 'service@bestappstore.co.uk',
     ratePerMinute: parseRatePerMinute(map.get(SETTING_KEYS.NEWSLETTER_RATE_PER_MINUTE)),
     emailProvider: parseEmailProvider(map.get(SETTING_KEYS.EMAIL_PROVIDER)),
     emailConfigured: await isEmailServiceConfigured(),

@@ -11,7 +11,7 @@ import { getPostHogClient } from '@/lib/posthog-server'
 import { getPublicSiteSettings } from '@/lib/site-settings-public'
 
 export const metadata: Metadata = {
-  title: '付款失敗 | 課程平台',
+  title: '付款失敗 | BestAppStore',
   description: '付款處理失敗',
 }
 

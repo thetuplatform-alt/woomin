@@ -10,7 +10,7 @@ import { MyCourseGrid } from '@/components/main/my-courses/my-course-grid'
 import { EmptyCourses } from '@/components/main/my-courses/empty-courses'
 
 export const metadata: Metadata = {
-  title: '我的課程 | 課程平台',
+  title: '我的課程 | BestAppStore',
   description: '管理您的學習進度，繼續未完成的課程',
 }
 

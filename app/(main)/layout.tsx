@@ -7,6 +7,7 @@ import { PostHogIdentify } from '@/components/common/posthog-identify'
 import { MetaPixelInit } from '@/components/common/meta-pixel-events'
 import { MainHeader } from '@/components/layouts/main-header'
 import { MainFooter } from '@/components/layouts/main-footer'
+import { MainLayoutFrame } from '@/components/layouts/main-layout-frame'
 import { getAnalyticsSettings } from '@/lib/analytics-settings'
 import { getPublicSiteSettings } from '@/lib/site-settings-public'
 
@@ -24,23 +25,21 @@ export default async function MainLayout({ children }: MainLayoutProps) {
     <SessionProvider>
       <PostHogIdentify />
       {analytics.metaPixelId && <MetaPixelInit pixelId={analytics.metaPixelId} />}
-      <div className="flex min-h-screen flex-col bg-background">
-        {/* 頂部導覽列 */}
-        <MainHeader
-          siteName={siteSettings.siteName}
-          siteLogo={siteSettings.siteLogo}
-          brandDisplayName={siteSettings.brandDisplayName}
-          brandSubtitle={siteSettings.brandSubtitle}
-          headerLeftLinks={siteSettings.headerLeftLinks}
-          headerRightLinks={siteSettings.headerRightLinks}
-        />
-
-        {/* 主要內容區域 */}
-        <main className="flex-1">{children}</main>
-
-        {/* 頁尾 */}
-        <MainFooter />
-      </div>
+      <MainLayoutFrame
+        header={
+          <MainHeader
+            siteName={siteSettings.siteName}
+            siteLogo={siteSettings.siteLogo}
+            brandDisplayName={siteSettings.brandDisplayName}
+            brandSubtitle={siteSettings.brandSubtitle}
+            headerLeftLinks={siteSettings.headerLeftLinks}
+            headerRightLinks={siteSettings.headerRightLinks}
+          />
+        }
+        footer={<MainFooter />}
+      >
+        {children}
+      </MainLayoutFrame>
     </SessionProvider>
   )
 }

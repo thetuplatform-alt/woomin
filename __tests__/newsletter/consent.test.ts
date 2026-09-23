@@ -18,7 +18,14 @@ jest.mock('@/lib/prisma', () => ({
   },
 }))
 
-import { assertEmailConsent } from '@/lib/newsletter/consent'
+import {
+  assertBestAppStoreEmailConsent,
+  assertEmailConsent,
+} from '@/lib/newsletter/consent'
+import {
+  GENERAL_EMAIL_CONSENT_VERSION,
+  MARKETING_EMAIL_CONSENT_VERSION,
+} from '@/lib/email-consent'
 
 function userFixture(overrides: Record<string, unknown> = {}) {
   return {
@@ -97,6 +104,73 @@ describe('assertEmailConsent：hard bounce 需全面阻擋（優先於任何 typ
       allowed: false,
       reason: 'user_not_found',
     })
+  })
+})
+
+describe('BestAppStore versioned email consent', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it('does not upgrade legacy marketing consent with a null termsVersion', async () => {
+    mockUserFindUnique.mockResolvedValue(userFixture({ marketingConsent: true }))
+    mockEmailConsentLogFindFirst.mockResolvedValue({
+      action: 'GRANTED',
+      termsVersion: null,
+    })
+
+    await expect(
+      assertBestAppStoreEmailConsent('user_1', 'marketing')
+    ).resolves.toEqual({
+      allowed: false,
+      reason: 'current_marketing_consent_required',
+    })
+  })
+
+  it('accepts an explicit current marketing consent grant', async () => {
+    mockUserFindUnique.mockResolvedValue(userFixture({ marketingConsent: true }))
+    mockEmailConsentLogFindFirst.mockResolvedValue({
+      action: 'GRANTED',
+      termsVersion: MARKETING_EMAIL_CONSENT_VERSION,
+    })
+
+    await expect(
+      assertBestAppStoreEmailConsent('user_1', 'marketing')
+    ).resolves.toEqual({ allowed: true })
+  })
+
+  it('does not treat a default generalEmailConsent value as proven opt-in', async () => {
+    mockUserFindUnique.mockResolvedValue(userFixture({ generalEmailConsent: true }))
+    mockEmailConsentLogFindFirst.mockResolvedValue(null)
+
+    await expect(
+      assertBestAppStoreEmailConsent('oauth_user', 'general')
+    ).resolves.toEqual({
+      allowed: false,
+      reason: 'current_general_consent_required',
+    })
+  })
+
+  it('accepts an explicit current general consent grant', async () => {
+    mockUserFindUnique.mockResolvedValue(userFixture({ generalEmailConsent: true }))
+    mockEmailConsentLogFindFirst.mockResolvedValue({
+      action: 'GRANTED',
+      termsVersion: GENERAL_EMAIL_CONSENT_VERSION,
+    })
+
+    await expect(
+      assertBestAppStoreEmailConsent('user_1', 'general')
+    ).resolves.toEqual({ allowed: true })
+  })
+
+  it('keeps transactional eligibility separate from marketing consent versions', async () => {
+    mockUserFindUnique.mockResolvedValue(
+      userFixture({ generalEmailConsent: false, marketingConsent: false })
+    )
+
+    await expect(
+      assertBestAppStoreEmailConsent('user_1', 'transactional')
+    ).resolves.toEqual({ allowed: true })
   })
 })
 

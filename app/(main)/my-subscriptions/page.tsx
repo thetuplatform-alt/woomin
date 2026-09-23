@@ -9,7 +9,7 @@ import { getMySubscriptions } from '@/lib/actions/subscriptions'
 import { MySubscriptionsClient } from '@/components/main/my-subscriptions/my-subscriptions-client'
 
 export const metadata: Metadata = {
-  title: '我的訂閱 | 課程平台',
+  title: '我的訂閱 | BestAppStore',
   description: '管理您的課程訂閱、扣款與發票資訊',
 }
 

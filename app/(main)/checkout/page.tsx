@@ -20,7 +20,7 @@ import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: '結帳 | 課程平台',
+  title: '結帳 | BestAppStore',
   description: '完成您的課程購買',
 }
 

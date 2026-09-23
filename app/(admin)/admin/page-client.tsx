@@ -318,7 +318,7 @@ export function DashboardPageClient({
       {/* 歡迎訊息 */}
       <div data-tour="dashboard-welcome">
         <h2 className="text-xl font-bold text-heading">歡迎回來，{userName}</h2>
-        <p className="text-body mt-1">這是您的課程平台營運概況</p>
+        <p className="text-body mt-1">這是您的 BestAppStore 營運概況</p>
       </div>
 
       {/* 統計卡片 */}

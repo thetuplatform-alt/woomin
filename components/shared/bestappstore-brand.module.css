@@ -1,0 +1,25 @@
+.brand {
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 52px;
+  align-items: center;
+  max-width: 100%;
+}
+
+.logo {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: left center;
+}
+
+.compact {
+  height: 38px;
+}
+
+@media (max-width: 560px) {
+  .brand { height: 38px; }
+  .compact { height: 32px; }
+}

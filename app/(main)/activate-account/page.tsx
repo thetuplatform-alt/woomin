@@ -3,8 +3,8 @@ import Link from 'next/link'
 import { ActivateAccountClient } from './activate-account-client'
 
 export const metadata: Metadata = {
-  title: '啟用帳號 | 課程平台',
-  description: '設定密碼並啟用您的課程帳號',
+  title: '啟用帳號 | BestAppStore',
+  description: '設定密碼並啟用您的 BestAppStore 會員帳號',
 }
 
 interface ActivateAccountPageProps {

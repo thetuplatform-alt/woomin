@@ -59,7 +59,7 @@ export function SiteSettingsForm({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(siteSettingsSchema) as any,
     defaultValues: {
-      siteName: initialSettings[SETTING_KEYS.SITE_NAME] || 'WooMin',
+      siteName: initialSettings[SETTING_KEYS.SITE_NAME] || 'BestAppStore',
       siteLogo: initialSettings[SETTING_KEYS.SITE_LOGO] || '',
       shareTitle: initialSettings[SETTING_KEYS.SHARE_TITLE] || '',
       shareDescription: initialSettings[SETTING_KEYS.SHARE_DESCRIPTION] || '',
@@ -243,7 +243,7 @@ export function SiteSettingsForm({
                     </FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="WooMin"
+                        placeholder="BestAppStore"
                         className="border-divider bg-white text-heading placeholder:text-caption focus:border-cta focus-visible:ring-cta/20"
                         {...field}
                       />
@@ -261,7 +261,7 @@ export function SiteSettingsForm({
                 name="siteLogo"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-heading">站點 Logo</FormLabel>
+                    <FormLabel className="text-heading">自訂站點 Logo</FormLabel>
                     <FormControl>
                       <div className="space-y-3">
                         {field.value ? (

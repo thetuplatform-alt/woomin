@@ -8,6 +8,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { usePublicSiteSettings } from "@/hooks/use-public-site-settings";
 import { DEFAULT_SITE_ICON_PATH } from "@/lib/site-brand-assets";
+import { BestAppStoreBrand } from "@/components/shared/bestappstore-brand";
 
 interface LogoProps {
   className?: string;
@@ -28,6 +29,8 @@ export function Logo({
   const siteLogo = siteLogoProp || settings.siteLogo
   const brandDisplayName = brandDisplayNameProp || settings.brandDisplayName
   const brandSubtitle = brandSubtitleProp || settings.brandSubtitle
+  const useBestAppStoreBrand =
+    brandDisplayName === 'BestAppStore' && (!siteLogo || siteLogo === DEFAULT_SITE_ICON_PATH)
 
   const sizeConfig = {
     sm: { image: 24, text: "text-sm" },
@@ -45,18 +48,24 @@ export function Logo({
         className
       )}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={siteLogo || DEFAULT_SITE_ICON_PATH}
-        alt={brandDisplayName || 'Brand'}
-        width={config.image}
-        height={config.image}
-        className="rounded-full overflow-hidden"
-      />
-      <div className={cn("flex flex-col leading-tight", config.text)}>
-        <span className="font-bold text-sm text-neutral-700">{brandDisplayName}</span>
-        <span className="font-bold text-sm text-neutral-700">{brandSubtitle}</span>
-      </div>
+      {useBestAppStoreBrand ? (
+        <BestAppStoreBrand compact={size !== 'lg'} />
+      ) : (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={siteLogo || DEFAULT_SITE_ICON_PATH}
+            alt={brandDisplayName || 'Brand'}
+            width={config.image}
+            height={config.image}
+            className="rounded-full overflow-hidden"
+          />
+          <div className={cn("flex flex-col leading-tight", config.text)}>
+            <span className="font-bold text-sm text-neutral-700">{brandDisplayName}</span>
+            <span className="font-bold text-sm text-neutral-700">{brandSubtitle}</span>
+          </div>
+        </>
+      )}
     </Link>
   );
 }

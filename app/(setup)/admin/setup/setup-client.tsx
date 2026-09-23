@@ -259,7 +259,7 @@ export function SetupClient({ user, detectedDefaults }: SetupClientProps) {
                 <OptionCard
                   active={videoProvider === 'cloudflare'}
                   title="Cloudflare Stream"
-                  description="使用受保護串流與影片託管，適合正式課程平台。"
+                  description="使用受保護串流與影片託管，適合正式內容平台。"
                   onClick={() => setVideoProvider('cloudflare')}
                 />
                 <OptionCard
@@ -570,7 +570,7 @@ export function SetupClient({ user, detectedDefaults }: SetupClientProps) {
                     <Input
                       value={emailSenderName}
                       onChange={(event) => setEmailSenderName(event.target.value)}
-                      placeholder="WooMin"
+                      placeholder="BestAppStore"
                     />
                   </div>
                   <div className="space-y-2">

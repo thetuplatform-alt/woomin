@@ -8,8 +8,8 @@ import { RegisterForm } from '@/components/forms/register-form'
 import { AuthPageWrapper } from '@/components/auth/auth-page-wrapper'
 
 export const metadata: Metadata = {
-  title: '註冊 | 課程平台',
-  description: '建立新帳號開始學習線上課程',
+  title: '註冊 | BestAppStore',
+  description: '建立 BestAppStore 會員帳號，使用已購買或獲授權的系列服務。',
 }
 
 interface RegisterPageProps {
