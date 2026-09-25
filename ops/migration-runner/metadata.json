@@ -2,7 +2,7 @@
   "applicationSourceCommit": "0e3187bc8fd8507e827919ea39d30b7d3d7e0c89",
   "targetMigration": "20260918090000_add_bestappstore_services_tools_entitlements",
   "targetMigrationSha256": "fa9a81460a15b6a2eeb62f5efc910805ef2c92f294f0989e00e910fe629f124a",
-  "migrationManifestSha256": "0b3dfd28b6f7c7c3777805b358c60ed83e427e8c1ae0136fd74f3aa06771ba3f",
+  "migrationManifestSha256": "8a0cceea1fab378f00633e094471b5a2af00740a4827e9978b6b137407b4fe14",
   "migrationCount": 47,
   "prismaVersion": "7.2.0",
   "nodeImage": "node:22.23.3-bookworm-slim@sha256:43ac6c60b8f89723f746e8a92ce91abd5017e627ce1ddfe4238355d3a30b772c"

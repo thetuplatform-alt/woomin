@@ -13,6 +13,26 @@ const metadataPath = process.env.RUNNER_METADATA
 const sha256 = (value) =>
   createHash("sha256").update(value).digest("hex");
 
+// Git stores these migration blobs with LF line endings. A Windows checkout may
+// materialize the same committed bytes as CRLF, so restore LF before hashing.
+// Reject bare CR bytes rather than silently canonicalizing unknown content.
+const committedBlobBytes = (contents, relativePath) => {
+  const bytes = [];
+
+  for (let index = 0; index < contents.length; index += 1) {
+    if (contents[index] !== 0x0d) {
+      bytes.push(contents[index]);
+      continue;
+    }
+
+    if (contents[index + 1] !== 0x0a) {
+      throw new Error(`Unexpected bare CR byte in ${relativePath}`);
+    }
+  }
+
+  return Buffer.from(bytes);
+};
+
 const migrationFiles = readdirSync(migrationsRoot, { withFileTypes: true })
   .filter((entry) => entry.isDirectory())
   .map((entry) => path.join(migrationsRoot, entry.name, "migration.sql"))
@@ -28,11 +48,13 @@ const migrationFiles = readdirSync(migrationsRoot, { withFileTypes: true })
   );
 
 const rows = migrationFiles.map((filePath) => {
-  const contents = readFileSync(filePath);
+  const relativePath = path
+    .relative(migrationsRoot, filePath)
+    .replaceAll("\\", "/");
+  const contents = committedBlobBytes(readFileSync(filePath), relativePath);
+
   return {
-    relativePath: path
-      .relative(migrationsRoot, filePath)
-      .replaceAll("\\", "/"),
+    relativePath,
     byteSize: contents.length,
     fileSha256: sha256(contents),
   };
