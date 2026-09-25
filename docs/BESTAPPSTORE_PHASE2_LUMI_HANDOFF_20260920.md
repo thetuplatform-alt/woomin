@@ -718,6 +718,10 @@ Blocked：
 
 Production Backup Gate 與 Restore Drill 均為 `PASS`。本機安全 backup 副本已取得，dump 的 size 與 SHA-256 已核對，PostgreSQL 18.6 `pg_restore --list` 與全新隔離 DB restore 均成功；restore 後 migration history 為 46／46，零 failed／rolled back，核心 schema 可讀。Restore Drill instance、pgdata、verified dump、logs、secrets 與原始 backup ZIP 目前依核准保留，尚未 cleanup。Production 全程未被連線或修改，且 production migration、seed 與 deploy 均未執行。Deployment candidate 亦尚未 add 或 commit；下一步需先完成正式 square icon 素材與 clean deployment candidate，再另輪規劃與核准 migration-only runner。
 
+## 43. Migration Runner Artifact Identity Limitation
+
+Zeabur 目前未提供 `SOURCE_GIT_COMMIT_SHA` pin；temporary migration runner build 會取得部署當下的 branch HEAD。2026-09-25 build 前與 build 後，`origin/bestappstore-phase2-migration-runner` 均為 `0b35d8796aecf223e198d23b5ea62bc4d331425d`，build verifier 驗證 47 個 migrations 與 immutable checksums 通過。此次 artifact identity 正式採用「branch HEAD 前後核對 + image digest + build verifier」證據模型，成功 artifact digest 為 `sha256:2cb0bc4cad9491fd4b7129a1b4860f520ae5c768c9ae68b00c33aa54f93f93d9`。若 Zeabur 未來支援 exact commit pin，runner build 流程應改用該能力。
+
 ## 44. 2026-09-23 正式 icon 資產狀態
 
 - 品牌方已核准 `1254 × 1254` RGBA PNG square symbol，作為本次 favicon／app icon 的正式 raster source。

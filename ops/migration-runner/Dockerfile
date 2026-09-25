@@ -34,7 +34,7 @@ LABEL org.opencontainers.image.title="BestAppStore Phase 2 migration-only runner
       org.opencontainers.image.revision="0e3187bc8fd8507e827919ea39d30b7d3d7e0c89" \
       bestappstore.migration.target="20260918090000_add_bestappstore_services_tools_entitlements" \
       bestappstore.migration.target-sha256="fa9a81460a15b6a2eeb62f5efc910805ef2c92f294f0989e00e910fe629f124a" \
-      bestappstore.migration.manifest-sha256="0b3dfd28b6f7c7c3777805b358c60ed83e427e8c1ae0136fd74f3aa06771ba3f"
+      bestappstore.migration.manifest-sha256="8a0cceea1fab378f00633e094471b5a2af00740a4827e9978b6b137407b4fe14"
 
 COPY --from=build --chown=node:node /runner/node_modules ./node_modules
 COPY --from=build --chown=node:node /runner/prisma.config.ts ./prisma.config.ts
