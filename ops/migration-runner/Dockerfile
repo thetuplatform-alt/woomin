@@ -4,12 +4,19 @@ ARG NODE_IMAGE=node:22.23.3-bookworm-slim@sha256:43ac6c60b8f89723f746e8a92ce91ab
 
 FROM ${NODE_IMAGE} AS build
 
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates openssl \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /runner
 
 COPY ops/migration-runner/package.json ops/migration-runner/pnpm-lock.yaml ops/migration-runner/pnpm-workspace.yaml ./
 RUN corepack enable \
     && corepack prepare pnpm@11.19.0 --activate \
     && pnpm install --prod --frozen-lockfile
+
+RUN test -x /runner/node_modules/.pnpm/@prisma+engines@7.2.0/node_modules/@prisma/engines/schema-engine-debian-openssl-3.0.x \
+    && /runner/node_modules/.pnpm/@prisma+engines@7.2.0/node_modules/@prisma/engines/schema-engine-debian-openssl-3.0.x --version
 
 COPY ops/migration-runner/prisma.config.ts ./prisma.config.ts
 COPY ops/migration-runner/metadata.json ./metadata.json
