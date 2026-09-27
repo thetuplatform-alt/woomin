@@ -1,0 +1,24 @@
+{
+  "name": "bestappstore-phase2-seed-runner",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@11.19.0",
+  "engines": {
+    "node": "22.23.3"
+  },
+  "scripts": {
+    "verify": "node ./verify-source.mjs",
+    "generate": "prisma generate --config ./prisma.config.ts",
+    "compile": "tsc --project ./tsconfig.json"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "7.2.0",
+    "@prisma/client": "7.2.0",
+    "pg": "8.16.3"
+  },
+  "devDependencies": {
+    "@types/node": "20.19.27",
+    "prisma": "7.2.0",
+    "typescript": "5.9.3"
+  }
+}
