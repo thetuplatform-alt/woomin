@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
+import { resolveAppUrl } from '@/lib/app-url'
 import { hasActiveEntitlement } from '@/lib/entitlements'
 import { getPublishedLumiToolBySlug } from '@/lib/lumi-tools'
 
@@ -31,7 +32,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 
   const session = await auth()
   if (tool.requiresLogin && !session?.user?.id) {
-    const loginUrl = new URL('/login', request.nextUrl.origin)
+    const loginUrl = new URL('/login', await resolveAppUrl({ request }))
     loginUrl.searchParams.set('returnTo', `/lumi-series/launch/${slug}`)
     return NextResponse.redirect(loginUrl)
   }
@@ -41,7 +42,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     requiredEntitlement &&
     (!session?.user?.id || !(await hasActiveEntitlement(session.user.id, requiredEntitlement)))
   ) {
-    const servicesUrl = new URL('/my-services', request.nextUrl.origin)
+    const servicesUrl = new URL('/my-services', await resolveAppUrl({ request }))
     servicesUrl.searchParams.set('access', 'denied')
     servicesUrl.searchParams.set('service', 'lumi-series')
     return NextResponse.redirect(servicesUrl, 303)
@@ -56,8 +57,9 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   }
 
   if (tool.runtimeType === 'BESTAPPSTORE_NATIVE' && tool.detailUrl) {
-    const detailUrl = new URL(tool.detailUrl, request.nextUrl.origin)
-    if (detailUrl.origin === request.nextUrl.origin) return NextResponse.redirect(detailUrl)
+    const appUrl = new URL(await resolveAppUrl({ request }))
+    const detailUrl = new URL(tool.detailUrl, appUrl)
+    if (detailUrl.origin === appUrl.origin) return NextResponse.redirect(detailUrl)
   }
 
   // Skill Runtime migration is intentionally outside this batch.
