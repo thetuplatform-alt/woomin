@@ -29,7 +29,11 @@ describe('patchHost', () => {
   it('對已經是 APP_URL host 的 request 保持 no-op', () => {
     process.env.APP_URL = 'https://aiver.me'
     const request = new NextRequest('https://aiver.me/api/auth/session', {
-      headers: { host: 'aiver.me', 'x-forwarded-host': 'aiver.me' },
+      headers: {
+        host: 'aiver.me',
+        'x-forwarded-host': 'aiver.me',
+        'x-forwarded-proto': 'https',
+      },
     })
 
     expect(patchHost(request)).toBe(request)
@@ -51,4 +55,74 @@ describe('patchHost', () => {
     expect(patched.headers.get('x-forwarded-host')).toBe('aiver.me')
     expect(patched.headers.get('x-forwarded-proto')).toBe('https')
   })
+
+  it('清除相同 hostname 上的內部 runtime port', () => {
+    process.env.APP_URL = 'https://bestappstore.co.uk'
+    const request = new NextRequest(
+      'https://bestappstore.co.uk:8080/api/auth/providers',
+      {
+        headers: {
+          host: 'bestappstore.co.uk:8080',
+          'x-forwarded-host': 'bestappstore.co.uk:8080',
+          'x-forwarded-proto': 'https',
+          'x-forwarded-port': '8080',
+        },
+      }
+    )
+
+    const patched = patchHost(request)
+    const patchedUrl = new URL(patched.url)
+
+    expect(patchedUrl.toString()).toBe(
+      'https://bestappstore.co.uk/api/auth/providers'
+    )
+    expect(patchedUrl.port).toBe('')
+    expect(patched.headers.get('host')).toBe('bestappstore.co.uk')
+    expect(patched.headers.get('x-forwarded-host')).toBe('bestappstore.co.uk')
+    expect(patched.headers.get('x-forwarded-port')).toBeNull()
+  })
+
+  it('將不同 hostname 與 port canonicalize 成 APP_URL origin', () => {
+    process.env.APP_URL = 'https://bestappstore.co.uk'
+    const request = new NextRequest(
+      'http://internal-host:8080/api/auth/providers',
+      {
+        headers: {
+          host: 'internal-host:8080',
+          'x-forwarded-host': 'internal-host:8080',
+          'x-forwarded-proto': 'http',
+          'x-forwarded-port': '8080',
+        },
+      }
+    )
+
+    const patched = patchHost(request)
+
+    expect(new URL(patched.url).origin).toBe('https://bestappstore.co.uk')
+    expect(patched.headers.get('x-forwarded-port')).toBeNull()
+  })
+
+  it('保留 APP_URL 明確指定的非標準 port', () => {
+    process.env.APP_URL = 'https://example.com:8443'
+    const request = new NextRequest(
+      'http://internal-host:8080/api/auth/providers',
+      {
+        headers: {
+          host: 'internal-host:8080',
+          'x-forwarded-host': 'internal-host:8080',
+          'x-forwarded-proto': 'http',
+          'x-forwarded-port': '8080',
+        },
+      }
+    )
+
+    const patched = patchHost(request)
+
+    expect(new URL(patched.url).origin).toBe('https://example.com:8443')
+    expect(new URL(patched.url).port).toBe('8443')
+    expect(patched.headers.get('host')).toBe('example.com:8443')
+    expect(patched.headers.get('x-forwarded-host')).toBe('example.com:8443')
+    expect(patched.headers.get('x-forwarded-port')).toBe('8443')
+  })
+
 })

@@ -10,13 +10,31 @@ export function patchHost(req: NextRequest): NextRequest {
   try {
     const baseUrl = new URL(base)
     const url = new URL(req.url)
-    if (url.host === baseUrl.host) return req
+    const forwardedPort = req.headers.get('x-forwarded-port')
+    const hasCanonicalForwardedPort = baseUrl.port
+      ? forwardedPort === baseUrl.port
+      : forwardedPort === null
+    if (
+      url.origin === baseUrl.origin &&
+      req.headers.get('host') === baseUrl.host &&
+      req.headers.get('x-forwarded-host') === baseUrl.host &&
+      req.headers.get('x-forwarded-proto') === baseUrl.protocol.replace(/:$/, '') &&
+      hasCanonicalForwardedPort
+    ) {
+      return req
+    }
     url.protocol = baseUrl.protocol
-    url.host = baseUrl.host
+    url.hostname = baseUrl.hostname
+    url.port = baseUrl.port
     const headers = new Headers(req.headers)
     headers.set('host', baseUrl.host)
-    headers.set('x-forwarded-host', baseUrl.hostname)
+    headers.set('x-forwarded-host', baseUrl.host)
     headers.set('x-forwarded-proto', baseUrl.protocol.replace(/:$/, ''))
+    if (baseUrl.port) {
+      headers.set('x-forwarded-port', baseUrl.port)
+    } else {
+      headers.delete('x-forwarded-port')
+    }
     const init: PatchedRequestInit = {
       method: req.method,
       headers,
