@@ -80,7 +80,6 @@ COPY --from=builder /prisma-cli/node_modules/dotenv ./node_modules/dotenv
 COPY --from=builder /src/node_modules/zod ./node_modules/zod
 EXPOSE 8080
 # 以 NODE_PATH 提供隔離的 prisma CLI 與 pg 給封裝腳本；其餘 SiteSetting 同步在啟動期執行，不再污染 build。
-# Zeabur service variables are guaranteed at runtime, while Docker ARG
-# propagation depends on the build method. Prefer the runtime value so the
-# public version endpoint never falls back to `unknown`.
-CMD ["sh", "-c", "if [ -n \"${GIT_COMMIT_SHA:-}\" ]; then printf '%s\\n' \"$GIT_COMMIT_SHA\" > /src/GIT_COMMIT_SHA; fi && NODE_PATH=/src/prisma-cli/node_modules node scripts/prisma-migrate-deploy.cjs && NODE_PATH=/src/runtime-cli/node_modules:/src/prisma-cli/node_modules /src/runtime-cli/node_modules/.bin/tsx /src/runtime-scripts/post-migrate-seamless-upgrade.ts && NODE_PATH=/src/runtime-cli/node_modules:/src/prisma-cli/node_modules /src/runtime-cli/node_modules/.bin/tsx /src/runtime-scripts/sync-cloudflare-stream-env-to-db.ts && NODE_PATH=/src/runtime-cli/node_modules:/src/prisma-cli/node_modules /src/runtime-cli/node_modules/.bin/tsx /src/runtime-scripts/sync-email-env-to-db.ts && export PORT=\"${PORT:-8080}\" HOSTNAME=\"0.0.0.0\" && node server.js"]
+# Production startup is intentionally app-only. Database migrations, backfills,
+# environment syncs, and seeds must run through separately approved workflows.
+CMD ["sh", "-c", "export PORT=\"${PORT:-8080}\" HOSTNAME=\"0.0.0.0\" && exec node server.js"]
