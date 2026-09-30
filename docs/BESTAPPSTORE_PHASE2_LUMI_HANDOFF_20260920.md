@@ -729,3 +729,57 @@ Production Backup Gate 與 Restore Drill 均為 `PASS`。本機安全 backup 副
 - `/icon.png` 與 `/icon.svg` 僅保留 legacy compatibility；primary runtime metadata 不再依賴舊路徑，且相容內容不再包含 muni／舊旗幟視覺。
 - 目前沒有真正 vector source；未執行自動 trace 或向量化。正式 symbol-only SVG master 仍列為後續品牌資產。
 - 本批未新增 PWA manifest、maskable icon、service worker 或 192／512 PWA 宣告；Open Graph `1200 × 630` 分享圖仍為後續獨立品牌資產。
+
+## 45. 2026-09-30 Production Phase 2 最終狀態
+
+正式 production 結果：
+
+- Production Migration：`PASS`。
+- Production Seed：`PASS`。
+- Production Application Deploy：`PASS`。
+- Production Smoke Test：`PASS`。
+- Production Phase 2：`PASS`。
+
+最終 production identity：
+
+- Branch：`bestappstore-homepage`。
+- Source SHA：`3f5bd0a425cf13347be362653faaa2ea99a90562`。
+- Zeabur deployment ID：`6abc789c9fbfb7e884171e79`。
+- Runtime：`1/1`。
+- Startup：app-only；只啟動 application server，未自動執行 migration、resolve、seed、post-migrate 或 env → DB sync。
+
+Production DB 最終唯讀 sanity：
+
+- Migrations：47／47。
+- Failed：0。
+- Rolled back：0。
+- Series：1。
+- Entitlement：1。
+- Tool：10（7 Web Apps + 3 Skills）。
+- UserEntitlement：0。
+- `qmeng-avatar` 維持 `DRAFT`、`isPublished = false`。
+- 3 個 Skills 的 `launchUrl` 均為 `null`。
+
+本次上線已解除的 blocker：
+
+1. Zeabur `thetu` service 的 stale Dockerfile override 引用不存在的 `runtime.tar.gz`；已清除 override，production build 改用 repo root `Dockerfile`。
+2. Auth callback URL 洩漏 internal `:8080`；已完成 canonical protocol／hostname／port 修正，credentials signin／callback URL 均使用 `https://bestappstore.co.uk`。
+3. Skill Launch Gateway redirect 洩漏 `0.0.0.0:8080`；已統一使用 canonical app URL，三個 Skill launch route 的未登入 redirect 均導向 `https://bestappstore.co.uk/login?returnTo=...`。
+
+Final production smoke：
+
+- Auth provider URLs canonical：`PASS`。
+- `/lumi-series` 未登入 guard：`PASS`。
+- `/my-services` 未登入 guard：`PASS`。
+- `line-sticker-planner`、`ai-product-social-sales-studio`、`ai-business-message-assistant` 未登入 launch redirect：`PASS`。
+- `qmeng-avatar` DRAFT／404：`PASS`。
+- Support／Help／Legal：`PASS`。
+- Canonical metadata／sitemap／robots／brand assets：`PASS`。
+- Runtime safety：`PASS`；無 migration、seed、sync 或 crash／restart loop。
+
+驗證邊界：
+
+- `NOT TESTED — requires separately approved entitled production test user`：登入後 Lumi Series／entitlement tool display。
+- 原因是 production `UserEntitlement = 0`，本輪未建立 production test entitlement；此項不列為失敗或 production blocker。
+
+結論：BestAppStore Production Phase 2 已正式完成並標記為 `PASS`。
