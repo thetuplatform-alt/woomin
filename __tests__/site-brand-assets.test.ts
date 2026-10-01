@@ -62,6 +62,11 @@ describe('site brand assets', () => {
     const homeSource = readProjectFile('app/(home)/page.tsx')
     expect(homeSource).toContain('BestAppStoreBrand')
     expect(homeSource).not.toContain('logo: `${appUrl}/icon.png`')
+
+    const authLayoutSource = readProjectFile('app/(auth)/layout.tsx')
+    expect(authLayoutSource).toContain('BestAppStoreBrand')
+    expect(authLayoutSource).toContain('aria-label="BestAppStore home"')
+    expect(authLayoutSource).toContain('href="/"')
   })
 
   it('ships the approved favicon, Apple, app, and runtime icon sizes', () => {
@@ -100,6 +105,22 @@ describe('site brand assets', () => {
 
     const sidebarSource = readProjectFile('components/admin/sidebar.tsx')
     expect(sidebarSource).toContain('isActuallyCollapsed ? "/bestappstore-icon.png" : "/bestappstore-logo.png"')
+  })
+
+  it('keeps the approved desktop and Lumi logo sizing contract', () => {
+    expect(readPngMetadata('public/bestappstore-logo.png')).toMatchObject({
+      width: 2160,
+      height: 728,
+    })
+
+    const brandStyles = readProjectFile('components/shared/bestappstore-brand.module.css')
+    expect(brandStyles).toMatch(/\.brand\s*\{[^}]*height:\s*52px;/s)
+    expect(brandStyles).toMatch(/\.logo\s*\{[^}]*width:\s*auto;[^}]*height:\s*100%;/s)
+    expect(brandStyles).toMatch(/\.compact\s*\{[^}]*height:\s*38px;/s)
+
+    const lumiStyles = readProjectFile('app/lumi-series/lumi-series.module.css')
+    expect(lumiStyles).toContain('.lumiBestAppStoreBrand { height: 44px; }')
+    expect(lumiStyles).toContain('.lumiBestAppStoreBrandCompact { height: 34px; }')
   })
 
   it('keeps public static assets outside the auth middleware catch-all while protecting admin routes', () => {
