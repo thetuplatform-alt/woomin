@@ -114,9 +114,9 @@ describe('site brand assets', () => {
     })
 
     const brandStyles = readProjectFile('components/shared/bestappstore-brand.module.css')
-    expect(brandStyles).toMatch(/\.brand\s*\{[^}]*height:\s*52px;/s)
-    expect(brandStyles).toMatch(/\.logo\s*\{[^}]*width:\s*auto;[^}]*height:\s*100%;/s)
-    expect(brandStyles).toMatch(/\.compact\s*\{[^}]*height:\s*38px;/s)
+    expect(brandStyles).toMatch(/\.brand\s*\{[^}]*height:\s*52px;/)
+    expect(brandStyles).toMatch(/\.logo\s*\{[^}]*width:\s*auto;[^}]*height:\s*100%;/)
+    expect(brandStyles).toMatch(/\.compact\s*\{[^}]*height:\s*38px;/)
 
     const lumiStyles = readProjectFile('app/lumi-series/lumi-series.module.css')
     expect(lumiStyles).toContain('.lumiBestAppStoreBrand { height: 44px; }')
