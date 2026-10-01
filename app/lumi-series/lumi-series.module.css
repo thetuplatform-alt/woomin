@@ -92,8 +92,18 @@
 .filterBar { display: flex; flex-wrap: wrap; gap: 8px; margin: 35px 0 28px; }
 .filterBar button { background: transparent; border: 1px solid rgba(101,115,84,.2); border-radius: 999px; color: #687063; cursor: pointer; font: inherit; font-size: 13px; padding: 10px 17px; transition: background .2s ease, color .2s ease, border .2s ease; }
 .filterBar button:hover, .filterBar .filterActive { background: var(--sage-dark); border-color: var(--sage-dark); color: white; }
+.catalogGroups { display: grid; gap: 34px; margin-top: 36px; }
+.kidsGroup { background: linear-gradient(135deg, rgba(251,244,231,.9), rgba(241,237,222,.78)); border: 1px solid rgba(166,126,76,.16); border-radius: 30px; padding: 28px; }
+.kidsGroupHeading { align-items: end; display: flex; gap: 28px; justify-content: space-between; margin-bottom: 22px; }
+.kidsGroupHeading h3 { color: #65513b; font-family: Georgia, "Noto Serif TC", "Songti TC", serif; font-size: clamp(26px, 3vw, 36px); font-weight: 500; letter-spacing: -.025em; margin: 10px 0 7px; }
+.kidsGroupHeading p { color: #7d7468; font-size: 14px; line-height: 1.7; margin: 0; }
+.kidsGroupBadge, .kidsGroupCount { border-radius: 999px; display: inline-flex; font-size: 11px; line-height: 1; }
+.kidsGroupBadge { background: rgba(191,145,86,.13); color: #8a6335; font-weight: 700; letter-spacing: .08em; padding: 8px 11px; }
+.kidsGroupCount { background: rgba(255,255,255,.58); border: 1px solid rgba(166,126,76,.14); color: #806f5d; flex: 0 0 auto; padding: 9px 12px; }
 .productGrid { display: grid; gap: 20px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.kidsProductGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .productCard { background: var(--paper); border: 1px solid rgba(93,102,83,.12); border-radius: 25px; box-shadow: 0 12px 38px rgba(69,73,60,.055); display: flex; flex-direction: column; min-width: 0; overflow: hidden; transition: box-shadow .25s ease, transform .25s ease; }
+.productCardWarm { border-color: rgba(166,126,76,.2); box-shadow: 0 12px 34px rgba(110,87,58,.06); }
 .productCard:hover { box-shadow: 0 18px 48px rgba(69,73,60,.1); transform: translateY(-4px); }
 .artworkLink { display: block; }
 .productArtwork { background: #e7eddf; height: 220px; overflow: hidden; position: relative; }
@@ -354,6 +364,7 @@
   .heroCopy { max-width: 620px; }
   .heroPhoto { left: 28%; }
   .productGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .kidsProductGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .featuredGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .featuredGrid > article:last-child { grid-column: span 2; max-width: calc(50% - 10px); }
   .whyGrid { grid-template-columns: repeat(2, 1fr); }
@@ -398,6 +409,9 @@
   .seriesGuideOptions button { flex: 0 0 142px; min-height: 58px; }
   .featuredSection, .catalogSection, .whySection, .relatedSection { padding-block: 72px; }
   .sectionHeadingRow { align-items: start; flex-direction: column; gap: 18px; }
+  .catalogGroups { gap: 24px; margin-top: 28px; }
+  .kidsGroup { border-radius: 24px; padding: 20px; }
+  .kidsGroupHeading { align-items: start; flex-direction: column; gap: 14px; margin-bottom: 18px; }
   .sectionHeading h2, .howIntro h2, .detailOverview h2, .detailUsage h2 { font-size: 34px; }
   .featuredGrid, .productGrid { grid-template-columns: 1fr; }
   .featuredGrid > article:last-child { grid-column: auto; max-width: none; }
