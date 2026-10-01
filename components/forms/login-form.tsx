@@ -4,16 +4,19 @@
 
 'use client'
 
-import { useActionState, useEffect } from 'react'
+import { FormEvent, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { loginWithCredentials, loginWithGoogle, loginWithApple } from '@/lib/actions/auth'
 import { Loader2 } from 'lucide-react'
-
-// 初始狀態
-const initialState: { error?: string; success?: boolean; redirectTo?: string } = {}
+import {
+  finishLoginSubmission,
+  getLoginFailureFeedback,
+  resolveSuccessfulLoginRedirect,
+  tryBeginLoginSubmission,
+} from '@/lib/login-flow'
 
 interface LoginFormProps {
   returnTo?: string
@@ -30,15 +33,50 @@ export function LoginForm({
   googleEnabled = true,
   appleEnabled = true,
 }: LoginFormProps) {
-  const [state, formAction, isPending] = useActionState(loginWithCredentials, initialState)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState<string>()
+  const [isRedirecting, setIsRedirecting] = useState(false)
+  const [isPending, startTransition] = useTransition()
+  const submissionLock = useRef(false)
+  const isBusy = isPending || isRedirecting
 
-  useEffect(() => {
-    if (state?.success) {
-      // PostHog 登入事件已在伺服器端 (lib/actions/auth.ts) 追蹤，此處不重複追蹤
-      // 使用硬導向確保瀏覽器帶著新的 session cookie 發起請求
-      window.location.href = state.redirectTo || returnTo || '/my-services'
-    }
-  }, [state?.success, state?.redirectTo, returnTo])
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!tryBeginLoginSubmission(submissionLock)) return
+
+    setError(undefined)
+    const formData = new FormData(event.currentTarget)
+
+    startTransition(async () => {
+      let shouldReleaseLock = true
+
+      try {
+        const result = await loginWithCredentials(undefined, formData)
+        const redirectTo = resolveSuccessfulLoginRedirect(result, returnTo)
+
+        if (redirectTo) {
+          shouldReleaseLock = false
+          setPassword('')
+          setIsRedirecting(true)
+          window.location.assign(redirectTo)
+          return
+        }
+
+        const feedback = getLoginFailureFeedback(email, result)
+        setEmail(feedback.email)
+        setPassword(feedback.password)
+        setError(feedback.error)
+      } catch {
+        const feedback = getLoginFailureFeedback(email)
+        setEmail(feedback.email)
+        setPassword(feedback.password)
+        setError(feedback.error)
+      } finally {
+        if (shouldReleaseLock) finishLoginSubmission(submissionLock)
+      }
+    })
+  }
 
   return (
     <div className="rounded-2xl border border-divider bg-white p-8 shadow-none">
@@ -112,66 +150,82 @@ export function LoginForm({
         )}
 
         {/* 電子郵件登入表單 */}
-        <form action={formAction} className="space-y-4">
-          {returnTo && (
-            <input type="hidden" name="returnTo" value={returnTo} />
-          )}
-          {/* 錯誤訊息 */}
-          {state?.error && (
-            <div className="p-3 text-sm text-red-500 bg-red-50/50 border border-red-200 rounded-lg">
-              {state.error}
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <Label htmlFor="email" className="text-sm font-medium text-heading">電子郵件</Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              placeholder="your@email.com"
-              required
-              disabled={isPending}
-              className="rounded-lg border border-divider bg-white px-4 py-6 text-heading placeholder:text-caption focus:border-cta focus:ring-cta/20"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="password" className="text-sm font-medium text-heading">密碼</Label>
-              <Link
-                href="/forgot-password"
-                className="text-xs text-caption hover:text-cta transition-colors"
-              >
-                忘記密碼？
-              </Link>
-            </div>
-            <Input
-              id="password"
-              name="password"
-              type="password"
-              placeholder="請輸入密碼"
-              required
-              disabled={isPending}
-              className="rounded-lg border border-divider bg-white px-4 py-6 text-heading placeholder:text-caption focus:border-cta focus:ring-cta/20"
-            />
-          </div>
-
-          <Button 
-            type="submit" 
-            className="w-full rounded-full bg-cta py-6 text-base font-semibold text-white transition-colors hover:bg-cta-hover" 
-            disabled={isPending}
+        {isRedirecting ? (
+          <div
+            role="status"
+            aria-live="polite"
+            className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700"
           >
-            {isPending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                登入中...
-              </>
-            ) : (
-              '登入'
+            登入成功，正在前往...
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4" aria-busy={isBusy}>
+            {returnTo && (
+              <input type="hidden" name="returnTo" value={returnTo} />
             )}
-          </Button>
-        </form>
+            {/* 錯誤訊息 */}
+            {error && (
+              <div className="p-3 text-sm text-red-500 bg-red-50/50 border border-red-200 rounded-lg">
+                {error}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-sm font-medium text-heading">電子郵件</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                placeholder="your@email.com"
+                required
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                autoComplete="email"
+                disabled={isBusy}
+                className="rounded-lg border border-divider bg-white px-4 py-6 text-heading placeholder:text-caption focus:border-cta focus:ring-cta/20"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password" className="text-sm font-medium text-heading">密碼</Label>
+                <Link
+                  href="/forgot-password"
+                  className="text-xs text-caption hover:text-cta transition-colors"
+                >
+                  忘記密碼？
+                </Link>
+              </div>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                placeholder="請輸入密碼"
+                required
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                autoComplete="current-password"
+                disabled={isBusy}
+                className="rounded-lg border border-divider bg-white px-4 py-6 text-heading placeholder:text-caption focus:border-cta focus:ring-cta/20"
+              />
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full rounded-full bg-cta py-6 text-base font-semibold text-white transition-colors hover:bg-cta-hover"
+              disabled={isBusy}
+            >
+              {isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  登入中...
+                </>
+              ) : (
+                '登入'
+              )}
+            </Button>
+          </form>
+        )}
       </div>
     </div>
   )
