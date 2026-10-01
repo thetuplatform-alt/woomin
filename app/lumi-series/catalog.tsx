@@ -11,17 +11,28 @@ import {
 } from './data'
 import { ProductArtwork } from './product-artwork'
 import { ProductTypeBadge } from './product-presentation'
+import { groupLumiCatalogProducts, lumiKidsGroup } from './catalog-grouping'
 import styles from './lumi-series.module.css'
 
 const experienceCategories = ['life', 'kids', 'creator', 'business'] as const
 
-export function ProductCard({ product, compact = false }: { product: LumiProduct; compact?: boolean }) {
+export function ProductCard({
+  product,
+  compact = false,
+  warm = false,
+}: {
+  product: LumiProduct
+  compact?: boolean
+  warm?: boolean
+}) {
   const purposeTags = product.tags
     .filter((tag) => tag !== product.type && tag !== lumiCategories[product.category].name)
     .slice(0, 2)
 
   return (
-    <article className={`${styles.productCard} ${compact ? styles.productCardCompact : ''}`}>
+    <article
+      className={`${styles.productCard} ${compact ? styles.productCardCompact : ''} ${warm ? styles.productCardWarm : ''}`}
+    >
       <Link className={styles.artworkLink} href={`/lumi-series/${product.slug}`} tabIndex={-1} aria-hidden="true">
         <ProductArtwork name={product.name} thumbnail={product.thumbnail} />
       </Link>
@@ -54,6 +65,10 @@ export function LumiCatalog({ products: allProducts }: { products: LumiProduct[]
     if (activeCategory === 'skills') return allProducts.filter((product) => product.type === 'AI Skill')
     return allProducts.filter((product) => product.category === activeCategory)
   }, [activeCategory, allProducts])
+  const { kidsProducts, otherProducts } = useMemo(
+    () => groupLumiCatalogProducts(products),
+    [products]
+  )
 
   return (
     <>
@@ -109,8 +124,29 @@ export function LumiCatalog({ products: allProducts }: { products: LumiProduct[]
           </div>
           <span className={styles.resultCount}><Sparkles size={15} /> {products.length} 個工具</span>
         </div>
-        <div className={styles.productGrid} aria-live="polite">
-          {products.map((product) => <ProductCard key={product.id} product={product} />)}
+        <div className={styles.catalogGroups} aria-live="polite">
+          {kidsProducts.length > 0 && (
+            <section className={styles.kidsGroup} aria-labelledby="lumi-kids-title">
+              <div className={styles.kidsGroupHeading}>
+                <div>
+                  <span className={styles.kidsGroupBadge}>{lumiKidsGroup.label}</span>
+                  <h3 id="lumi-kids-title">{lumiKidsGroup.name}</h3>
+                  <p>{lumiKidsGroup.description}</p>
+                </div>
+                <span className={styles.kidsGroupCount}>{kidsProducts.length} 個工具</span>
+              </div>
+              <div className={`${styles.productGrid} ${styles.kidsProductGrid}`}>
+                {kidsProducts.map((product) => (
+                  <ProductCard key={product.id} product={product} warm />
+                ))}
+              </div>
+            </section>
+          )}
+          {otherProducts.length > 0 && (
+            <div className={styles.productGrid}>
+              {otherProducts.map((product) => <ProductCard key={product.id} product={product} />)}
+            </div>
+          )}
         </div>
         </div>
       </section>
