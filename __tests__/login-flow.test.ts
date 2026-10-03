@@ -1,6 +1,7 @@
 import {
   finishLoginSubmission,
   getLoginFailureFeedback,
+  replaceWindowLocation,
   resolveSuccessfulLoginRedirect,
   tryBeginLoginSubmission,
 } from '@/lib/login-flow'
@@ -63,5 +64,14 @@ describe('credentials login UX flow', () => {
         '//evil.example/steal'
       )
     ).toBe('/my-services')
+  })
+
+  it('uses a replace navigation with the validated destination', () => {
+    const replace = jest.fn()
+
+    replaceWindowLocation('/my-services', replace)
+
+    expect(replace).toHaveBeenCalledTimes(1)
+    expect(replace).toHaveBeenCalledWith('/my-services')
   })
 })

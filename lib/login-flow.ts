@@ -44,3 +44,10 @@ export function tryBeginLoginSubmission(lock: SubmissionLock): boolean {
 export function finishLoginSubmission(lock: SubmissionLock): void {
   lock.current = false
 }
+
+export function replaceWindowLocation(
+  redirectTo: string,
+  replace: (url: string) => void = (url) => window.location.replace(url)
+): void {
+  replace(redirectTo)
+}

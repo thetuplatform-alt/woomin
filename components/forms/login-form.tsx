@@ -4,7 +4,7 @@
 
 'use client'
 
-import { FormEvent, useRef, useState, useTransition } from 'react'
+import { FormEvent, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,6 +14,7 @@ import { Loader2 } from 'lucide-react'
 import {
   finishLoginSubmission,
   getLoginFailureFeedback,
+  replaceWindowLocation,
   resolveSuccessfulLoginRedirect,
   tryBeginLoginSubmission,
 } from '@/lib/login-flow'
@@ -37,45 +38,46 @@ export function LoginForm({
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string>()
   const [isRedirecting, setIsRedirecting] = useState(false)
-  const [isPending, startTransition] = useTransition()
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const submissionLock = useRef(false)
-  const isBusy = isPending || isRedirecting
+  const isBusy = isSubmitting || isRedirecting
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!tryBeginLoginSubmission(submissionLock)) return
 
     setError(undefined)
+    setIsSubmitting(true)
     const formData = new FormData(event.currentTarget)
+    let shouldReleaseLock = true
 
-    startTransition(async () => {
-      let shouldReleaseLock = true
+    try {
+      const result = await loginWithCredentials(undefined, formData)
+      const redirectTo = resolveSuccessfulLoginRedirect(result, returnTo)
 
-      try {
-        const result = await loginWithCredentials(undefined, formData)
-        const redirectTo = resolveSuccessfulLoginRedirect(result, returnTo)
-
-        if (redirectTo) {
-          shouldReleaseLock = false
-          setPassword('')
-          setIsRedirecting(true)
-          window.location.assign(redirectTo)
-          return
-        }
-
-        const feedback = getLoginFailureFeedback(email, result)
-        setEmail(feedback.email)
-        setPassword(feedback.password)
-        setError(feedback.error)
-      } catch {
-        const feedback = getLoginFailureFeedback(email)
-        setEmail(feedback.email)
-        setPassword(feedback.password)
-        setError(feedback.error)
-      } finally {
-        if (shouldReleaseLock) finishLoginSubmission(submissionLock)
+      if (redirectTo) {
+        shouldReleaseLock = false
+        setPassword('')
+        setIsRedirecting(true)
+        replaceWindowLocation(redirectTo)
+        return
       }
-    })
+
+      const feedback = getLoginFailureFeedback(email, result)
+      setEmail(feedback.email)
+      setPassword(feedback.password)
+      setError(feedback.error)
+    } catch {
+      const feedback = getLoginFailureFeedback(email)
+      setEmail(feedback.email)
+      setPassword(feedback.password)
+      setError(feedback.error)
+    } finally {
+      if (shouldReleaseLock) {
+        finishLoginSubmission(submissionLock)
+        setIsSubmitting(false)
+      }
+    }
   }
 
   return (
@@ -215,7 +217,7 @@ export function LoginForm({
               className="w-full rounded-full bg-cta py-6 text-base font-semibold text-white transition-colors hover:bg-cta-hover"
               disabled={isBusy}
             >
-              {isPending ? (
+              {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   登入中...
