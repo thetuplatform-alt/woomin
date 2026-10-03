@@ -12,11 +12,12 @@ import { Label } from '@/components/ui/label'
 import { loginWithCredentials, loginWithGoogle, loginWithApple } from '@/lib/actions/auth'
 import { Loader2 } from 'lucide-react'
 import {
+  beginLoginNavigation,
   finishLoginSubmission,
   getLoginFailureFeedback,
-  replaceWindowLocation,
   resolveSuccessfulLoginRedirect,
   tryBeginLoginSubmission,
+  type LoginActionResult,
 } from '@/lib/login-flow'
 
 interface LoginFormProps {
@@ -39,45 +40,60 @@ export function LoginForm({
   const [error, setError] = useState<string>()
   const [isRedirecting, setIsRedirecting] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [navigationFallback, setNavigationFallback] = useState<{
+    message: string
+    target: string
+  }>()
   const submissionLock = useRef(false)
   const isBusy = isSubmitting || isRedirecting
+
+  function releaseSubmission() {
+    finishLoginSubmission(submissionLock)
+    setIsSubmitting(false)
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!tryBeginLoginSubmission(submissionLock)) return
 
     setError(undefined)
+    setNavigationFallback(undefined)
     setIsSubmitting(true)
     const formData = new FormData(event.currentTarget)
-    let shouldReleaseLock = true
+    let result: LoginActionResult
 
     try {
-      const result = await loginWithCredentials(undefined, formData)
-      const redirectTo = resolveSuccessfulLoginRedirect(result, returnTo)
-
-      if (redirectTo) {
-        shouldReleaseLock = false
-        setPassword('')
-        setIsRedirecting(true)
-        replaceWindowLocation(redirectTo)
-        return
-      }
-
-      const feedback = getLoginFailureFeedback(email, result)
-      setEmail(feedback.email)
-      setPassword(feedback.password)
-      setError(feedback.error)
+      result = await loginWithCredentials(undefined, formData)
     } catch {
       const feedback = getLoginFailureFeedback(email)
       setEmail(feedback.email)
       setPassword(feedback.password)
       setError(feedback.error)
-    } finally {
-      if (shouldReleaseLock) {
-        finishLoginSubmission(submissionLock)
-        setIsSubmitting(false)
-      }
+      releaseSubmission()
+      return
     }
+
+    const redirectTo = resolveSuccessfulLoginRedirect(result, returnTo)
+
+    if (redirectTo) {
+      setPassword('')
+      setIsRedirecting(true)
+      beginLoginNavigation({
+        redirectTo,
+        onFallback: (fallback) => {
+          setIsRedirecting(false)
+          setNavigationFallback(fallback)
+          releaseSubmission()
+        },
+      })
+      return
+    }
+
+    const feedback = getLoginFailureFeedback(email, result)
+    setEmail(feedback.email)
+    setPassword(feedback.password)
+    setError(feedback.error)
+    releaseSubmission()
   }
 
   return (
@@ -159,6 +175,19 @@ export function LoginForm({
             className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700"
           >
             登入成功，正在前往...
+          </div>
+        ) : navigationFallback ? (
+          <div
+            role="alert"
+            className="space-y-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"
+          >
+            <p>{navigationFallback.message}</p>
+            <Link
+              href={navigationFallback.target}
+              className="inline-flex font-semibold text-cta hover:text-cta-hover"
+            >
+              {navigationFallback.target === '/my-services' ? '前往我的服務' : '繼續前往'}
+            </Link>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4" aria-busy={isBusy}>

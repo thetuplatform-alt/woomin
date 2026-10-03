@@ -1,4 +1,5 @@
 import {
+  beginLoginNavigation,
   finishLoginSubmission,
   getLoginFailureFeedback,
   replaceWindowLocation,
@@ -73,5 +74,25 @@ describe('credentials login UX flow', () => {
 
     expect(replace).toHaveBeenCalledTimes(1)
     expect(replace).toHaveBeenCalledWith('/my-services')
+  })
+
+  it('uses the safe destination for a navigation fallback', () => {
+    const fallback = jest.fn()
+
+    beginLoginNavigation({
+      redirectTo: '/my-services',
+      onFallback: fallback,
+      replace: () => {
+        throw new Error('replace failed')
+      },
+      schedule: jest.fn(() => 1),
+      cancel: jest.fn(),
+      subscribeToPageHide: jest.fn(() => jest.fn()),
+    })
+
+    expect(fallback).toHaveBeenCalledWith({
+      message: '登入已成功，但自動前往頁面未完成。',
+      target: '/my-services',
+    })
   })
 })
